@@ -7,6 +7,7 @@ mod anitya;
 mod github;
 mod gitlab;
 mod gitweb;
+mod git;
 mod html;
 
 #[macro_export]
@@ -54,10 +55,11 @@ pub fn check_update(config: &HashMap<String, String>, client: &Client) -> Result
         .as_str();
     let checker: Result<Box<dyn UpdateChecker>> = match ty {
         "anitya" => Ok(use_this!(anitya::AnityaChecker, config)),
-        "html" => Ok(use_this!(html::HTMLChecker, config)),
         "github" => Ok(use_this!(github::GitHubChecker, config)),
         "gitlab" => Ok(use_this!(gitlab::GitLabChecker, config)),
         "gitweb" => Ok(use_this!(gitweb::GitWebChecker, config)),
+        "git" => Ok(use_this!(git::GitChecker, config)),
+        "html" => Ok(use_this!(html::HTMLChecker, config)),
         _ => Err(anyhow!("Unknown type")),
     };
     let checker = checker?;
