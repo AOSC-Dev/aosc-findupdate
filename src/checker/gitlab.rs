@@ -13,7 +13,7 @@ const API_ENDPOINT: &str = "https://gitlab.com";
 
 #[derive(Deserialize)]
 struct GitLabData {
-    tag_name: String,
+    name: String,
 }
 
 pub(crate) struct GitLabChecker {
@@ -50,7 +50,7 @@ impl UpdateChecker for GitLabChecker {
     fn check(&self, client: &Client) -> Result<String> {
         let resp = client
             .get(&format!(
-                "{}/api/v4/projects/{}/releases",
+                "{}/api/v4/projects/{}/repository/tags",
                 self.instance,
                 percent_encode(self.repo.as_bytes(), NON_ALPHANUMERIC)
             ))
@@ -60,7 +60,7 @@ impl UpdateChecker for GitLabChecker {
             let regex = Regex::new(&pattern)?;
             payload = payload
                 .into_iter()
-                .filter(|x| regex.is_match(&x.tag_name))
+                .filter(|x| regex.is_match(&x.name))
                 .collect();
         }
         if payload.len() < 1 {
@@ -70,10 +70,10 @@ impl UpdateChecker for GitLabChecker {
             ));
         }
         if self.sort_version {
-            payload.sort_unstable_by(|b, a| version_compare(&a.tag_name, &b.tag_name));
+            payload.sort_unstable_by(|b, a| version_compare(&a.name, &b.name));
         }
 
-        Ok(payload.first().unwrap().tag_name.clone())
+        Ok(payload.first().unwrap().name.clone())
     }
 }
 

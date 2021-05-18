@@ -4,14 +4,8 @@ use owo_colors::colored::*;
 use rayon::prelude::*;
 use regex::Regex;
 use reqwest::blocking::Client;
-use std::{
-    borrow::Cow,
-    cmp::Ordering,
-    collections::HashMap,
-    fs::OpenOptions,
-    io::{Read, Seek, SeekFrom, Write},
-    path::{Path, PathBuf},
-};
+use version_compare::{CompOp, VersionCompare};
+use std::{borrow::Cow, collections::HashMap, fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, path::{Path, PathBuf}, sync::{Arc, atomic::{AtomicUsize, Ordering}}};
 
 mod checker;
 mod cli;
@@ -57,9 +51,13 @@ fn update_version<P: AsRef<Path>>(new: &str, spec: P) -> Result<String> {
     let mut content = String::new();
     f.read_to_string(&mut content)?;
     let replace = Regex::new("VER=.+").unwrap();
+    let replace_rel = Regex::new("REL=.+").unwrap();
     let replaced = replace.replace(&content, format!("VER={}", new));
+    let replaced = replace_rel.replace(&replaced, "");
     f.seek(SeekFrom::Start(0))?;
-    f.write_all(replaced.as_bytes())?;
+    let bytes = replaced.as_bytes();
+    f.write_all(bytes)?;
+    f.set_len(bytes.len() as u64)?;
 
     Ok(replaced.to_string())
 }
@@ -113,11 +111,15 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
     if current_version.contains("+") {
         warnings.push(format!("Compound version number '{}'", current_version))
     }
-    if checker::version_compare(current_version, new_version) == Ordering::Greater {
-        warnings.push(format!(
-            "Possible downgrade from the current version ({} -> {})",
-            current_version, new_version
-        ));
+    if let Ok(ret) = VersionCompare::compare(current_version, new_version) {
+        if ret == CompOp::Gt {
+            warnings.push(format!(
+                "Possible downgrade from the current version ({} -> {})",
+                current_version, new_version
+            ));
+        }
+    } else {
+        warnings.push(format!("Versions not comparable: `{}` and `{}`", current_version, new_version));
     }
     let modified = update_version(new_version, spec.as_ref())?;
     let mut new_ctx = HashMap::new();
@@ -153,7 +155,7 @@ fn print_results(results: &[Result<CheckerResult>]) {
                 result.name.cyan(),
                 result.before.red(),
                 result.after.green(),
-                result.warnings.join("\t").yellow()
+                result.warnings.join(";\t").yellow()
             );
         }
     }
@@ -203,7 +205,9 @@ fn main() {
             .collect();
     }
 
-    info!("Checking updates for {} packages ...", files.len());
+    let total = files.len();
+    info!("Checking updates for {} packages ...", total);
+    let current = Arc::new(AtomicUsize::new(1));
 
     let results: Vec<_> = files
         .par_iter()
@@ -211,7 +215,8 @@ fn main() {
             || Client::new(),
             |c, f| {
                 let name = normalize_name(f);
-                info!("Checking {} ...", &name);
+                let current = current.fetch_add(1, Ordering::SeqCst);
+                info!("[{}/{}] Checking {} ...", current, total, &name);
                 check_update_worker(c, f).map_err(|e| anyhow!("{}: {:?}", name, e))
             },
         )
