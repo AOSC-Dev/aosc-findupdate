@@ -4,8 +4,18 @@ use owo_colors::colored::*;
 use rayon::prelude::*;
 use regex::Regex;
 use reqwest::blocking::Client;
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    fs::OpenOptions,
+    io::{Read, Seek, SeekFrom, Write},
+    path::{Path, PathBuf},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+};
 use version_compare::{CompOp, VersionCompare};
-use std::{borrow::Cow, collections::HashMap, fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, path::{Path, PathBuf}, sync::{Arc, atomic::{AtomicUsize, Ordering}}};
 
 mod checker;
 mod cli;
@@ -119,7 +129,10 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
             ));
         }
     } else {
-        warnings.push(format!("Versions not comparable: `{}` and `{}`", current_version, new_version));
+        warnings.push(format!(
+            "Versions not comparable: `{}` and `{}`",
+            current_version, new_version
+        ));
     }
     let modified = update_version(new_version, spec.as_ref())?;
     let mut new_ctx = HashMap::new();
