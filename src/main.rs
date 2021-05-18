@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use log::info;
+use owo_colors::colored::*;
 use rayon::prelude::*;
 use regex::Regex;
 use reqwest::blocking::Client;
@@ -60,7 +61,7 @@ fn update_version<P: AsRef<Path>>(new: &str, spec: P) -> Result<String> {
     f.seek(SeekFrom::Start(0))?;
     f.write_all(replaced.as_bytes())?;
 
-    Ok(content)
+    Ok(replaced.to_string())
 }
 
 fn validate_urls(a: &HashMap<String, String>, b: &HashMap<String, String>) -> bool {
@@ -98,6 +99,7 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
     let config = parser::parse_check_update(&config_line)?;
     let new_version = checker::check_update(&config, client)?;
     let new_version = new_version.trim();
+    let new_version = new_version.strip_prefix("v").unwrap_or(new_version);
     let name = normalize_name(spec.as_ref()).to_string();
     let mut warnings = Vec::new();
     if current_version == new_version {
@@ -118,10 +120,10 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
         ));
     }
     let modified = update_version(new_version, spec.as_ref())?;
-    let mut new_content = HashMap::new();
-    match abbs_meta_apml::parse(&modified, &mut new_content) {
+    let mut new_ctx = HashMap::new();
+    match abbs_meta_apml::parse(&modified, &mut new_ctx) {
         Ok(_) => {
-            if validate_urls(&s, &new_content) {
+            if validate_urls(&s, &new_ctx) {
                 warnings.push(format!("Hardcoded URLs detected."));
             }
         }
@@ -140,6 +142,7 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
 
 fn print_results(results: &[Result<CheckerResult>]) {
     println!("The following packages were updated:");
+    println!("Name\t\t\t\tVersion\t\t\t\tIssues");
     for result in results {
         if let Ok(result) = result {
             if result.before == result.after {
@@ -147,17 +150,17 @@ fn print_results(results: &[Result<CheckerResult>]) {
             }
             println!(
                 "{}\t\t{} -> {}\t\t{}",
-                result.name,
-                result.before,
-                result.after,
-                result.warnings.join("\t")
+                result.name.cyan(),
+                result.before.red(),
+                result.after.green(),
+                result.warnings.join("\t").yellow()
             );
         }
     }
     println!("\nErrors:");
     for result in results {
         if let Err(e) = result {
-            println!("{}", e);
+            println!("{}", e.bold());
         }
     }
 }
@@ -209,7 +212,7 @@ fn main() {
             |c, f| {
                 let name = normalize_name(f);
                 info!("Checking {} ...", &name);
-                check_update_worker(c, f)
+                check_update_worker(c, f).map_err(|e| anyhow!("{}: {:?}", name, e))
             },
         )
         .collect();

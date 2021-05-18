@@ -6,7 +6,7 @@ use crate::must_have;
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::blocking::Client;
-use reqwest::header::AUTHORIZATION;
+use reqwest::header::{AUTHORIZATION, USER_AGENT};
 use serde::Deserialize;
 
 const API_ENDPOINT: &str = "https://api.github.com/";
@@ -42,7 +42,9 @@ impl UpdateChecker for GitHubChecker {
     }
 
     fn check(&self, client: &Client) -> Result<String> {
-        let mut builder = client.get(&format!("{}repos/{}/", API_ENDPOINT, self.repo));
+        let mut builder = client
+            .get(&format!("{}repos/{}/tags", API_ENDPOINT, self.repo))
+            .header(USER_AGENT, "AOSCFindUpdate/0.1.0");
         if let Ok(token) = std::env::var("GITHUB_TOKEN") {
             builder = builder.header(AUTHORIZATION, format!("token {}", token));
         }
@@ -64,4 +66,13 @@ impl UpdateChecker for GitHubChecker {
 
         Ok(payload.first().unwrap().name.clone())
     }
+}
+
+#[test]
+fn test_github() {
+    let mut options = HashMap::new();
+    options.insert("repo".to_string(), "AOSC-Dev/ciel-rs".to_string());
+    let client = Client::new();
+    let checker = GitHubChecker::new(&options).unwrap();
+    dbg!(checker.check(&client).unwrap());
 }
