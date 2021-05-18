@@ -4,10 +4,10 @@ use std::{cmp::Ordering, collections::HashMap};
 use version_compare::{comp_op::CompOp, VersionCompare};
 
 mod anitya;
+mod git;
 mod github;
 mod gitlab;
 mod gitweb;
-mod git;
 mod html;
 
 #[macro_export]

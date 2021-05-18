@@ -5,12 +5,21 @@ pub fn build_cli() -> App<'static, 'static> {
         .version(crate_version!())
         .about("Find updated packages in the abbs tree")
         .arg(
-            Arg::with_name("FILE").short("f").takes_value(true).help("Path to a list of packages to be updated")
+            Arg::with_name("FILE")
+                .short("f")
+                .takes_value(true)
+                .help("Path to a list of packages to be updated"),
         )
         .arg(
-            Arg::with_name("INCLUDE").short("i").takes_value(true).help("Use regular expression to filter which package to update")
+            Arg::with_name("INCLUDE")
+                .short("i")
+                .takes_value(true)
+                .help("Use regular expression to filter which package to update"),
         )
         .arg(
-            Arg::with_name("DIR").short("d").takes_value(true).help("Specify the directory to the abbs tree")
+            Arg::with_name("DIR")
+                .short("d")
+                .takes_value(true)
+                .help("Specify the directory to the abbs tree"),
         )
 }

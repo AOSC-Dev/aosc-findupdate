@@ -1,9 +1,16 @@
 use anyhow::{anyhow, Result};
-use log::{info, warn};
+use log::info;
 use rayon::prelude::*;
 use regex::Regex;
 use reqwest::blocking::Client;
-use std::{borrow::Cow, cmp::Ordering, collections::HashMap, fs::OpenOptions, io::{Read, Seek, SeekFrom, Write}, path::{Path, PathBuf}};
+use std::{
+    borrow::Cow,
+    cmp::Ordering,
+    collections::HashMap,
+    fs::OpenOptions,
+    io::{Read, Seek, SeekFrom, Write},
+    path::{Path, PathBuf},
+};
 
 mod checker;
 mod cli;
@@ -105,7 +112,10 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
         warnings.push(format!("Compound version number '{}'", current_version))
     }
     if checker::version_compare(current_version, new_version) == Ordering::Greater {
-        warnings.push(format!("Possible downgrade from the current version ({} -> {})", current_version, new_version));
+        warnings.push(format!(
+            "Possible downgrade from the current version ({} -> {})",
+            current_version, new_version
+        ));
     }
     let modified = update_version(new_version, spec.as_ref())?;
     let mut new_content = HashMap::new();
@@ -114,7 +124,7 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
             if validate_urls(&s, &new_content) {
                 warnings.push(format!("Hardcoded URLs detected."));
             }
-        },
+        }
         Err(err) => {
             warnings.push(format!("Modified spec is broken: {}", err));
         }
@@ -126,6 +136,30 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
         before: current_version.to_string(),
         after: new_version.to_string(),
     })
+}
+
+fn print_results(results: &[Result<CheckerResult>]) {
+    println!("The following packages were updated:");
+    for result in results {
+        if let Ok(result) = result {
+            if result.before == result.after {
+                continue;
+            }
+            println!(
+                "{}\t\t{} -> {}\t\t{}",
+                result.name,
+                result.before,
+                result.after,
+                result.warnings.join("\t")
+            );
+        }
+    }
+    println!("\nErrors:");
+    for result in results {
+        if let Err(e) = result {
+            println!("{}", e);
+        }
+    }
 }
 
 fn main() {
@@ -168,14 +202,17 @@ fn main() {
 
     info!("Checking updates for {} packages ...", files.len());
 
-    let results: Vec<_> = files.par_iter().map_init(
-        || Client::new(),
-        |c, f| {
-            let name = normalize_name(f);
-            info!("Checking {} ...", &name);
-            check_update_worker(c, f)
-        },
-    ).collect();
+    let results: Vec<_> = files
+        .par_iter()
+        .map_init(
+            || Client::new(),
+            |c, f| {
+                let name = normalize_name(f);
+                info!("Checking {} ...", &name);
+                check_update_worker(c, f)
+            },
+        )
+        .collect();
 
-    dbg!(results);
+    print_results(&results);
 }

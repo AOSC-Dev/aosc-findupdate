@@ -6,6 +6,7 @@ use crate::must_have;
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::blocking::Client;
+use reqwest::header::AUTHORIZATION;
 use serde::Deserialize;
 
 const API_ENDPOINT: &str = "https://api.github.com/";
@@ -41,9 +42,11 @@ impl UpdateChecker for GitHubChecker {
     }
 
     fn check(&self, client: &Client) -> Result<String> {
-        let resp = client
-            .get(&format!("{}repos/{}/", API_ENDPOINT, self.repo))
-            .send()?;
+        let mut builder = client.get(&format!("{}repos/{}/", API_ENDPOINT, self.repo));
+        if let Ok(token) = std::env::var("GITHUB_TOKEN") {
+            builder = builder.header(AUTHORIZATION, format!("token {}", token));
+        }
+        let resp = builder.send()?;
         let mut payload: Vec<GitHubData> = resp.json()?;
         if let Some(pattern) = &self.pattern {
             let regex = Regex::new(&pattern)?;

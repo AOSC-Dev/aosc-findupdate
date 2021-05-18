@@ -84,16 +84,10 @@ impl UpdateChecker for GitChecker {
         let mut tags = collect_git_tags(&body)?;
         if let Some(pattern) = &self.pattern {
             let regex = Regex::new(&pattern)?;
-            tags = tags
-                .into_iter()
-                .filter(|x| regex.is_match(x))
-                .collect();
+            tags = tags.into_iter().filter(|x| regex.is_match(x)).collect();
         }
         if tags.len() < 1 {
-            return Err(anyhow!(
-                "Git ({}) didn't return any tags!",
-                self.url
-            ));
+            return Err(anyhow!("Git ({}) didn't return any tags!", self.url));
         }
         tags.sort_unstable_by(|b, a| version_compare(a, b));
 
@@ -172,7 +166,10 @@ fn test_multiline() {
 #[test]
 fn test_git_raw() {
     let mut options = HashMap::new();
-    options.insert("url".to_string(), "https://git.tuxfamily.org/bluebird/cms.git".to_string());
+    options.insert(
+        "url".to_string(),
+        "https://git.tuxfamily.org/bluebird/cms.git".to_string(),
+    );
     let client = Client::new();
     let checker = GitChecker::new(&options).unwrap();
     dbg!(checker.check(&client).unwrap());

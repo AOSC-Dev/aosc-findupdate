@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use log::{info, warn};
 use nom::{
     bytes::complete::{tag, take_until},
     character::complete::alphanumeric1,
@@ -12,7 +13,6 @@ use std::{
     io::{BufRead, BufReader, Read},
     path::Path,
 };
-use log::{info, warn};
 
 type Context = HashMap<String, String>;
 
@@ -91,16 +91,26 @@ fn read_package_list<P: AsRef<Path>>(filename: P, depth: usize) -> Result<Vec<St
 }
 
 /// Expand the packages list to an array of packages
-pub(crate) fn expand_package_list<'a, P: AsRef<Path>, I: IntoIterator<Item = P>>(packages: I) -> Vec<String> {
+pub(crate) fn expand_package_list<'a, P: AsRef<Path>, I: IntoIterator<Item = P>>(
+    packages: I,
+) -> Vec<String> {
     let mut expanded = Vec::new();
     for package in packages {
         match read_package_list(package.as_ref(), 0) {
             Ok(list) => {
-                info!("Read {} packages from {}", list.len(), package.as_ref().display());
+                info!(
+                    "Read {} packages from {}",
+                    list.len(),
+                    package.as_ref().display()
+                );
                 expanded.extend(list);
             }
             Err(e) => {
-                warn!("Unable to read package group `{}`: {}", package.as_ref().display(), e);
+                warn!(
+                    "Unable to read package group `{}`: {}",
+                    package.as_ref().display(),
+                    e
+                );
             }
         }
     }
