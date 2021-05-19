@@ -1,3 +1,4 @@
+use aho_corasick::AhoCorasickBuilder;
 use anyhow::{anyhow, Result};
 use log::info;
 use owo_colors::colored::*;
@@ -20,6 +21,8 @@ use version_compare::{CompOp, VersionCompare};
 mod checker;
 mod cli;
 mod parser;
+
+const VCS_VERSION_NUMBERS: &[&str] = &["+git", "+hg", "+svn", "+bzr"];
 
 #[derive(Debug)]
 struct CheckerResult {
@@ -118,8 +121,15 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
             after: new_version.to_string(),
         });
     }
+    let snapshot_version = AhoCorasickBuilder::new().build(VCS_VERSION_NUMBERS);
     if current_version.contains("+") {
-        warnings.push(format!("Compound version number '{}'", current_version))
+        warnings.push(format!("Compound version number '{}'", current_version));
+        if let Some(version) = snapshot_version.find(current_version) {
+            warnings.push(format!(
+                "Version number indicates a snapshot ({}) is used",
+                VCS_VERSION_NUMBERS[version.pattern()]
+            ))
+        }
     }
     if let Ok(ret) = VersionCompare::compare(current_version, new_version) {
         if ret == CompOp::Gt {

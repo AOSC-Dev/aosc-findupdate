@@ -51,6 +51,7 @@ name = "aosc-findupdate"
 version = "0.1.0"
 dependencies = [
  "abbs-meta-apml",
+ "aho-corasick",
  "anyhow",
  "clap",
  "env_logger",
