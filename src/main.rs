@@ -167,18 +167,18 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
 
 fn print_results(results: &[Result<CheckerResult>]) {
     println!("The following packages were updated:");
-    println!("Name\t\t\t\tVersion\t\t\t\tIssues");
+    println!("{:<30}{:^44}\t\tIssues", "Name", "Version");
     for result in results {
         if let Ok(result) = result {
             if result.before == result.after {
                 continue;
             }
             println!(
-                "{}\t\t{} -> {}\t\t{}",
+                "{:<30}{:>20} -> {:<20}\t\t{}",
                 result.name.cyan(),
                 result.before.red(),
                 result.after.green(),
-                result.warnings.join(";\t").yellow()
+                result.warnings.join("; ").yellow()
             );
         }
     }
