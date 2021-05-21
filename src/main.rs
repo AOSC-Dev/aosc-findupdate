@@ -240,7 +240,7 @@ fn main() {
                 let name = normalize_name(f);
                 let current = current.fetch_add(1, Ordering::SeqCst);
                 info!("[{}/{}] Checking {} ...", current, total, &name);
-                check_update_worker(c, f).map_err(|e| anyhow!("{}: {:?}", name, e))
+                check_update_worker(c, f).map_err(|e| anyhow!("{}: {:?}", name.cyan(), e))
             },
         )
         .collect();
