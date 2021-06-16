@@ -21,6 +21,7 @@ log = "0.4"
 env_logger = "0.8"
 aho-corasick = "0.7"
 owo-colors = "2.0"
+sailfish = "0.3"
 
 [profile.release]
 lto = true

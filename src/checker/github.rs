@@ -7,13 +7,46 @@ use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::blocking::Client;
 use reqwest::header::{AUTHORIZATION, USER_AGENT};
-use serde::Deserialize;
+use sailfish::TemplateOnce;
+use serde::{Deserialize, Serialize};
 
 const API_ENDPOINT: &str = "https://api.github.com/";
 
-#[derive(Deserialize)]
-struct GitHubData {
+#[derive(TemplateOnce)]
+#[template(path = "github.stpl")]
+struct GitHubQuery {
     name: String,
+    owner: String,
+}
+
+#[derive(Serialize)]
+struct GitHubRequest {
+    query: String,
+}
+
+#[derive(Deserialize)]
+struct GitHubTagData {
+    name: String,
+}
+
+#[derive(Deserialize)]
+struct GitHubRef {
+    nodes: Vec<GitHubTagData>,
+}
+
+#[derive(Deserialize)]
+struct GitHubRepo {
+    refs: GitHubRef,
+}
+
+#[derive(Deserialize)]
+struct GitHubResponseInner {
+    repository: GitHubRepo,
+}
+
+#[derive(Deserialize)]
+struct GitHubResponse {
+    data: GitHubResponseInner,
 }
 
 pub(crate) struct GitHubChecker {
@@ -42,14 +75,29 @@ impl UpdateChecker for GitHubChecker {
     }
 
     fn check(&self, client: &Client) -> Result<String> {
+        let mut slug = self.repo.splitn(2, '/');
+        let query = GitHubQuery {
+            owner: slug
+                .next()
+                .ok_or_else(|| anyhow!("Repository owner missing"))?
+                .to_string(),
+            name: slug
+                .next()
+                .ok_or_else(|| anyhow!("Repository name missing"))?
+                .to_string(),
+        }
+        .render_once()?;
         let mut builder = client
-            .get(&format!("{}repos/{}/tags", API_ENDPOINT, self.repo))
+            .post(&format!("{}graphql", API_ENDPOINT))
             .header(USER_AGENT, "AOSCFindUpdate/0.1.0");
         if let Ok(token) = std::env::var("GITHUB_TOKEN") {
             builder = builder.header(AUTHORIZATION, format!("token {}", token));
+        } else {
+            return Err(anyhow!("GitHub checker requires authentication! Please set GITHUB_TOKEN environment variable."));
         }
-        let resp = builder.send()?;
-        let mut payload: Vec<GitHubData> = resp.json()?;
+        let resp = builder.json(&GitHubRequest { query }).send()?;
+        let payload: GitHubResponse = resp.json()?;
+        let mut payload = payload.data.repository.refs.nodes;
         if let Some(pattern) = &self.pattern {
             let regex = Regex::new(&pattern)?;
             payload = payload
