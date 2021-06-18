@@ -5,6 +5,12 @@ pub fn build_cli() -> App<'static, 'static> {
         .version(crate_version!())
         .about("Find updated packages in the abbs tree")
         .arg(
+            Arg::with_name("LOG")
+                .short("l")
+                .takes_value(true)
+                .help("Log updated packages to a file"),
+        )
+        .arg(
             Arg::with_name("FILE")
                 .short("f")
                 .takes_value(true)

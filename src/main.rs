@@ -5,17 +5,10 @@ use owo_colors::colored::*;
 use rayon::prelude::*;
 use regex::Regex;
 use reqwest::blocking::Client;
-use std::{
-    borrow::Cow,
-    collections::HashMap,
-    fs::OpenOptions,
-    io::{Read, Seek, SeekFrom, Write},
-    path::{Path, PathBuf},
-    sync::{
+use std::{borrow::Cow, collections::HashMap, fs::{File, OpenOptions}, io::{Read, Seek, SeekFrom, Write}, path::{Path, PathBuf}, sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
-    },
-};
+    }};
 use version_compare::{CompOp, VersionCompare};
 
 mod checker;
@@ -246,4 +239,17 @@ fn main() {
         .collect();
 
     print_results(&results);
+    
+    if let Some(log_file) = args.value_of("LOG") {
+        let mut f = File::create(log_file).unwrap();
+        let items: Vec<_> = results.iter().filter_map(|x| {
+            if let Ok(ret) = x {
+                Some(ret.name.clone())
+            } else {
+                None
+            }
+        }).collect();
+        f.write_all(items.join("\n").as_bytes()).unwrap();
+        info!("Wrote results to {}", log_file);
+    }
 }
