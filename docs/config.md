@@ -51,14 +51,14 @@ CHKUPDATE="anitya::id=1832"
 **Environment Variables:**
 | Name | Required? | Description |
 |------|-----------|-------------|
-|GITHUB_TOKEN|Recommended|Your GitHub access token. Use it to increase rate limits. [Click here to access them or create one](https://github.com/settings/tokens).|
+|GITHUB_TOKEN|**REQUIRED**|Your GitHub access token. Use it to authenticate with GitHub API. [Click here to access them or create one](https://github.com/settings/tokens).|
 
 **Options:**
 
 | Key | Required? | Description |
 |-----|-----------|-------------|
 |`repo`|**REQUIRED**|Project slug (e.g. `AOSC-Dev/ciel-rs`).|
-|`pattern`|Optional|A regular expression pattern that matches the version numbers. Use this option to filter out unwanted versions (e.g. nightlies).|
+|`pattern`|Optional|A regular expression pattern that matches the version numbers. Use this option to filter out unwanted versions (e.g. nightlies). The capture group #1 _could be_ used to match the version number.|
 |`sort_version`|Optional|Sort version numbers instead of using GitHub provided order (**alphabetical** order of the tag name).|
 
 **Example:**
@@ -86,7 +86,7 @@ N/A
 |-----|-----------|-------------|
 |`repo`|**REQUIRED**|Project slug (e.g. `GNOME/fractal`) or Project ID (e.g. `132`).|
 |`instance`|Optional|GitLab instance URL. Useful for when the project is hosted on a self-hosted GitLab server. If unspecified, this defaults to `https://gitlab.com`|
-|`pattern`|Optional|A regular expression pattern that matches the version numbers. Use this option to filter out unwanted versions (e.g. nightlies).|
+|`pattern`|Optional|A regular expression pattern that matches the version numbers. Use this option to filter out unwanted versions (e.g. nightlies). The capture group #1 _could be_ used to match the version number.|
 |`sort_version`|Optional|Sort version numbers instead of using GitLab provided order (**creation dates** of the tags).|
 
 **Example:**
@@ -114,7 +114,7 @@ N/A
 | Key | Required? | Description |
 |-----|-----------|-------------|
 |`url`|**REQUIRED**|URL to the GitWeb repository page|
-|`pattern`|Optional|A regular expression pattern that matches the version numbers. Use this option to filter out unwanted versions (e.g. nightlies).|
+|`pattern`|Optional|A regular expression pattern that matches the version numbers. Use this option to filter out unwanted versions (e.g. nightlies). The capture group #1 _could be_ used to match the version number.|
 
 **Notes:**
 
@@ -144,7 +144,7 @@ N/A
 | Key | Required? | Description |
 |-----|-----------|-------------|
 |`url`|**REQUIRED**|URL to the Git repository clone URL (http/https only, `git://` protocol unsupported)|
-|`pattern`|Optional|A regular expression pattern that matches the version numbers. Use this option to filter out unwanted versions (e.g. nightlies).|
+|`pattern`|Optional|A regular expression pattern that matches the version numbers. Use this option to filter out unwanted versions (e.g. nightlies). The capture group #1 _could be_ used to match the version number.|
 
 **Notes:**
 

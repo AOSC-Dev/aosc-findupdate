@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use super::version_compare;
-use super::UpdateChecker;
+use super::{extract_versions, version_compare, UpdateChecker};
 use crate::must_have;
 use anyhow::{anyhow, Result};
 use nom::{
@@ -14,7 +13,6 @@ use nom::{
     sequence::{separated_pair, terminated},
     IResult,
 };
-use regex::Regex;
 use reqwest::blocking::Client;
 use reqwest::header::USER_AGENT;
 
@@ -81,10 +79,12 @@ impl UpdateChecker for GitChecker {
             .header("git-protocol", "version=2")
             .send()?;
         let body = resp.bytes()?;
-        let mut tags = collect_git_tags(&body)?;
+        let mut tags = collect_git_tags(&body)?
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>();
         if let Some(pattern) = &self.pattern {
-            let regex = Regex::new(&pattern)?;
-            tags = tags.into_iter().filter(|x| regex.is_match(x)).collect();
+            tags = extract_versions(pattern, &tags)?;
         }
         if tags.len() < 1 {
             return Err(anyhow!("Git ({}) didn't return any tags!", self.url));

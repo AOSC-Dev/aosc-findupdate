@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 
-use super::version_compare;
-use super::UpdateChecker;
+use super::{extract_versions, version_compare, UpdateChecker};
 use crate::must_have;
 use anyhow::{anyhow, Result};
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
-use regex::Regex;
 use reqwest::blocking::Client;
 use serde::Deserialize;
 
@@ -55,13 +53,10 @@ impl UpdateChecker for GitLabChecker {
                 percent_encode(self.repo.as_bytes(), NON_ALPHANUMERIC)
             ))
             .send()?;
-        let mut payload: Vec<GitLabData> = resp.json()?;
+        let payload: Vec<GitLabData> = resp.json()?;
+        let mut payload = payload.into_iter().map(|x| x.name).collect::<Vec<_>>();
         if let Some(pattern) = &self.pattern {
-            let regex = Regex::new(&pattern)?;
-            payload = payload
-                .into_iter()
-                .filter(|x| regex.is_match(&x.name))
-                .collect();
+            payload = extract_versions(pattern, &payload)?;
         }
         if payload.len() < 1 {
             return Err(anyhow!(
@@ -70,10 +65,10 @@ impl UpdateChecker for GitLabChecker {
             ));
         }
         if self.sort_version {
-            payload.sort_unstable_by(|b, a| version_compare(&a.name, &b.name));
+            payload.sort_unstable_by(|b, a| version_compare(&a, &b));
         }
 
-        Ok(payload.first().unwrap().name.clone())
+        Ok(payload.first().unwrap().clone())
     }
 }
 

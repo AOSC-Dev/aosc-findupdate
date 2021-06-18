@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 
-use super::version_compare;
-use super::UpdateChecker;
+use super::{extract_versions, version_compare, UpdateChecker};
 use crate::must_have;
 use anyhow::{anyhow, Result};
-use regex::Regex;
 use reqwest::blocking::Client;
 use reqwest::header::{AUTHORIZATION, USER_AGENT};
 use sailfish::TemplateOnce;
@@ -97,22 +95,25 @@ impl UpdateChecker for GitHubChecker {
         }
         let resp = builder.json(&GitHubRequest { query }).send()?;
         let payload: GitHubResponse = resp.json()?;
-        let mut payload = payload.data.repository.refs.nodes;
+        let mut payload = payload
+            .data
+            .repository
+            .refs
+            .nodes
+            .into_iter()
+            .map(|node| node.name)
+            .collect::<Vec<_>>();
         if let Some(pattern) = &self.pattern {
-            let regex = Regex::new(&pattern)?;
-            payload = payload
-                .into_iter()
-                .filter(|x| regex.is_match(&x.name))
-                .collect();
+            payload = extract_versions(pattern, &payload)?;
         }
         if payload.len() < 1 {
             return Err(anyhow!("GitHub didn't return any tags!"));
         }
         if self.sort_version {
-            payload.sort_unstable_by(|b, a| version_compare(&a.name, &b.name));
+            payload.sort_unstable_by(|b, a| version_compare(&a, &b));
         }
 
-        Ok(payload.first().unwrap().name.clone())
+        Ok(payload.first().unwrap().clone())
     }
 }
 

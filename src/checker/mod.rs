@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use regex::Regex;
 use reqwest::blocking::Client;
 use std::{cmp::Ordering, collections::HashMap};
 use version_compare::{comp_op::CompOp, VersionCompare};
@@ -22,6 +23,31 @@ macro_rules! use_this {
     ($c:ty, $config:ident) => {
         Box::new(<$c>::new($config)?)
     };
+}
+
+pub(crate) fn extract_versions<S: AsRef<str>>(
+    pattern: &str,
+    collection: &[S],
+) -> Result<Vec<String>> {
+    let regex = Regex::new(pattern)?;
+    let results = if regex.captures_len() > 1 {
+        collection
+            .into_iter()
+            .filter_map(|x| {
+                regex
+                    .captures(x.as_ref())
+                    .and_then(|x| x.get(1))
+                    .and_then(|x| Some(x.as_str().to_string()))
+            })
+            .collect()
+    } else {
+        collection
+            .into_iter()
+            .filter_map(|x| regex.is_match(x.as_ref()).then(|| x.as_ref().to_string()))
+            .collect()
+    };
+
+    Ok(results)
 }
 
 #[inline]

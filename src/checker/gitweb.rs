@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 
-use super::version_compare;
-use super::UpdateChecker;
+use super::{extract_versions, version_compare, UpdateChecker};
 use crate::must_have;
 use anyhow::{anyhow, Result};
 use kuchiki::traits::*;
-use regex::Regex;
 use reqwest::blocking::Client;
 
 pub(crate) struct GitWebChecker {
@@ -45,11 +43,7 @@ impl UpdateChecker for GitWebChecker {
         }
 
         if let Some(pattern) = &self.pattern {
-            let regex = Regex::new(&pattern)?;
-            versions = versions
-                .into_iter()
-                .filter(|x| regex.is_match(&x))
-                .collect();
+            versions = extract_versions(pattern, &versions)?;
         }
 
         if versions.len() < 1 {
