@@ -1,6 +1,6 @@
 use aho_corasick::AhoCorasickBuilder;
 use anyhow::{anyhow, Result};
-use log::info;
+use log::{info, warn};
 use owo_colors::colored::*;
 use rayon::prelude::*;
 use regex::Regex;
@@ -87,7 +87,7 @@ fn validate_urls(a: &HashMap<String, String>, b: &HashMap<String, String>) -> bo
     false
 }
 
-fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<CheckerResult> {
+fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P, dry_run: bool) -> Result<CheckerResult> {
     let s = parser::parse_spec(spec.as_ref())?;
     let current_version = s
         .get("VER")
@@ -137,16 +137,19 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P) -> Result<Check
             current_version, new_version
         ));
     }
-    let modified = update_version(new_version, spec.as_ref())?;
-    let mut new_ctx = HashMap::new();
-    match abbs_meta_apml::parse(&modified, &mut new_ctx) {
-        Ok(_) => {
-            if validate_urls(&s, &new_ctx) {
-                warnings.push(format!("Hardcoded URLs detected."));
+
+    if !dry_run {
+        let modified = update_version(new_version, spec.as_ref())?;
+        let mut new_ctx = HashMap::new();
+        match abbs_meta_apml::parse(&modified, &mut new_ctx) {
+            Ok(_) => {
+                if validate_urls(&s, &new_ctx) {
+                    warnings.push(format!("Hardcoded URLs detected."));
+                }
             }
-        }
-        Err(err) => {
-            warnings.push(format!("Modified spec is broken: {}", err));
+            Err(err) => {
+                warnings.push(format!("Modified spec is broken: {}", err));
+            }
         }
     }
 
@@ -190,6 +193,7 @@ fn main() {
     if let Some(p) = args.value_of("INCLUDE") {
         pattern = Some(Regex::new(p).unwrap());
     }
+    let dry_run = args.is_present("DRY_RUN");
     let workdir = if let Some(d) = args.value_of("DIR") {
         Path::new(d).canonicalize().unwrap()
     } else {
@@ -221,6 +225,7 @@ fn main() {
             .collect();
     }
 
+    warn!("Dry-run mode: files will not be updated.");
     let total = files.len();
     info!("Checking updates for {} packages ...", total);
     let current = Arc::new(AtomicUsize::new(1));
@@ -233,7 +238,7 @@ fn main() {
                 let name = normalize_name(f);
                 let current = current.fetch_add(1, Ordering::SeqCst);
                 info!("[{}/{}] Checking {} ...", current, total, &name);
-                check_update_worker(c, f).map_err(|e| anyhow!("{}: {:?}", name.cyan(), e))
+                check_update_worker(c, f, dry_run).map_err(|e| anyhow!("{}: {:?}", name.cyan(), e))
             },
         )
         .collect();
