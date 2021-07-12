@@ -7,6 +7,7 @@ use reqwest::blocking::Client;
 use reqwest::header::{AUTHORIZATION, USER_AGENT};
 use sailfish::TemplateOnce;
 use serde::{Deserialize, Serialize};
+use log::debug;
 
 const API_ENDPOINT: &str = "https://api.github.com/";
 
@@ -103,9 +104,11 @@ impl UpdateChecker for GitHubChecker {
             .into_iter()
             .map(|node| node.name)
             .collect::<Vec<_>>();
+        debug!("returned tags: {:?}", payload);
         if let Some(pattern) = &self.pattern {
             payload = extract_versions(pattern, &payload)?;
         }
+        debug!("after filter: {:?}", payload);
         if payload.len() < 1 {
             return Err(anyhow!("GitHub didn't return any tags!"));
         }

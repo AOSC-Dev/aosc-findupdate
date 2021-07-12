@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use super::{extract_versions, version_compare, UpdateChecker};
 use crate::must_have;
 use anyhow::{anyhow, Result};
+use log::debug;
 use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
 use reqwest::blocking::Client;
 use serde::Deserialize;
@@ -55,9 +56,11 @@ impl UpdateChecker for GitLabChecker {
             .send()?;
         let payload: Vec<GitLabData> = resp.json()?;
         let mut payload = payload.into_iter().map(|x| x.name).collect::<Vec<_>>();
+        debug!("returned tags: {:?}", payload);
         if let Some(pattern) = &self.pattern {
             payload = extract_versions(pattern, &payload)?;
         }
+        debug!("after filter: {:?}", payload);
         if payload.len() < 1 {
             return Err(anyhow!(
                 "GitLab ({}) didn't return any tags!",

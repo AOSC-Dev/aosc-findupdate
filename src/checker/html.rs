@@ -4,6 +4,7 @@ use super::version_compare;
 use super::UpdateChecker;
 use crate::must_have;
 use anyhow::{anyhow, Result};
+use log::debug;
 use regex::Regex;
 use reqwest::blocking::Client;
 
@@ -49,6 +50,7 @@ impl UpdateChecker for HTMLChecker {
         } else if versions.len() == 1 {
             return Ok(versions[0].to_string());
         }
+        debug!("matched tags: {:?}", versions);
 
         versions.sort_unstable_by(|a, b| version_compare(a, b));
 
