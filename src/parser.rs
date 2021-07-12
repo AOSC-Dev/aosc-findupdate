@@ -1,8 +1,10 @@
 use anyhow::{anyhow, Result};
 use log::{info, warn};
 use nom::{
+    branch::alt,
     bytes::complete::{tag, take_until},
     character::complete::alphanumeric1,
+    combinator::recognize,
     multi::many1,
     sequence::{separated_pair, terminated},
     IResult,
@@ -22,8 +24,12 @@ fn take_type(input: &str) -> IResult<&str, &str> {
     take_until(CONFIG_SEPARATOR)(input)
 }
 
+fn kv_key(input: &str) -> IResult<&str, &str> {
+    recognize(many1(alt((alphanumeric1, tag("_")))))(input)
+}
+
 fn kv_pair(input: &str) -> IResult<&str, (&str, &str)> {
-    separated_pair(alphanumeric1, tag("="), take_until(";"))(input)
+    separated_pair(kv_key, tag("="), take_until(";"))(input)
 }
 
 fn kv_pairs(input: &str) -> IResult<&str, Vec<(&str, &str)>> {
@@ -122,6 +128,12 @@ pub(crate) fn expand_package_list<'a, P: AsRef<Path>, I: IntoIterator<Item = P>>
 fn test_take_type() {
     let test = "test::1";
     assert_eq!(take_type(test), Ok(("::1", "test")));
+}
+
+#[test]
+fn test_kv_key() {
+    let test = "a_b123";
+    assert_eq!(kv_key(test), Ok(("", "a_b123")));
 }
 
 #[test]
