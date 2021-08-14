@@ -78,6 +78,7 @@ impl UpdateChecker for GitChecker {
             .header(USER_AGENT, format!("git/{}", SIMULATED_GIT_VERSION))
             .header("git-protocol", "version=2")
             .send()?;
+        resp.error_for_status_ref()?;
         let body = resp.bytes()?;
         let mut tags = collect_git_tags(&body)?
             .into_iter()

@@ -95,6 +95,7 @@ impl UpdateChecker for GitHubChecker {
             return Err(anyhow!("GitHub checker requires authentication! Please set GITHUB_TOKEN environment variable."));
         }
         let resp = builder.json(&GitHubRequest { query }).send()?;
+        resp.error_for_status_ref()?;
         let payload: GitHubResponse = resp.json()?;
         let mut payload = payload
             .data

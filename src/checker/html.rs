@@ -33,6 +33,7 @@ impl UpdateChecker for HTMLChecker {
                 return Err(anyhow!("HTML body too large"));
             }
         }
+        resp.error_for_status_ref()?;
         let body = resp.text()?;
         let pattern = Regex::new(&self.pattern)?;
         let matches = pattern.captures_iter(&body);
