@@ -57,7 +57,7 @@ fn update_version<P: AsRef<Path>>(new: &str, spec: P) -> Result<String> {
     let mut content = String::new();
     f.read_to_string(&mut content)?;
     let replace = Regex::new("VER=.+").unwrap();
-    let replace_rel = Regex::new("REL=.+").unwrap();
+    let replace_rel = Regex::new("REL=.+\\v{2,}").unwrap();
     let replaced = replace.replace(&content, format!("VER={}", new));
     let replaced = replace_rel.replace(&replaced, "");
     f.seek(SeekFrom::Start(0))?;
@@ -225,7 +225,9 @@ fn main() {
             .collect();
     }
 
-    warn!("Dry-run mode: files will not be updated.");
+    if dry_run {
+        warn!("Dry-run mode: files will not be updated.");
+    }
     let total = files.len();
     info!("Checking updates for {} packages ...", total);
     let current = Arc::new(AtomicUsize::new(1));
