@@ -12,34 +12,47 @@ const API_ENDPOINT: &str = "https://release-monitoring.org/api/project/";
 struct AnityaData {
     id: usize,
     stable_versions: Vec<String>,
+    versions: Vec<String>,
 }
 
 pub(crate) struct AnityaChecker {
     id: usize,
+    stable_only: bool,
 }
 
 impl UpdateChecker for AnityaChecker {
     fn new(config: &HashMap<String, String>) -> Result<Self> {
         let id = must_have!(config, "id", "Anitya project ID")?.parse::<usize>()?;
+        let stable_only = if let Some(stable_only) = config.get("stable_only") {
+            stable_only == "true"
+        } else {
+            true
+        };
 
-        Ok(AnityaChecker { id })
+        Ok(AnityaChecker { id, stable_only })
     }
 
     fn check(&self, client: &Client) -> Result<String> {
         let resp = client
             .get(&format!("{}{}/", API_ENDPOINT, self.id))
             .send()?;
+        resp.error_for_status_ref()?;
         let payload: AnityaData = resp.json()?;
         if payload.id != self.id {
             return Err(anyhow!(
                 "The unthinkable happened: requested ID and received ID mismatch."
             ));
         }
-        if payload.stable_versions.len() < 1 {
+        let versions = if self.stable_only {
+            payload.stable_versions
+        } else {
+            payload.versions
+        };
+        if versions.len() < 1 {
             return Err(anyhow!("Anitya didn't return any stable versions!"));
         }
 
-        Ok(payload.stable_versions[0].clone())
+        Ok(versions[0].clone())
     }
 }
 
