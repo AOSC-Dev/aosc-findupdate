@@ -57,7 +57,7 @@ fn update_version<P: AsRef<Path>>(new: &str, spec: P) -> Result<String> {
     let mut content = String::new();
     f.read_to_string(&mut content)?;
     let replace = Regex::new("VER=.+").unwrap();
-    let replace_rel = Regex::new("REL=.+\\v{2,}").unwrap();
+    let replace_rel = Regex::new("REL=.+\\v+").unwrap();
     let replaced = replace.replace(&content, format!("VER={}", new));
     let replaced = replace_rel.replace(&replaced, "");
     f.seek(SeekFrom::Start(0))?;
