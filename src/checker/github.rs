@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use super::{extract_versions, version_compare, UpdateChecker};
 use crate::must_have;
 use anyhow::{anyhow, Result};
+use log::debug;
 use reqwest::blocking::Client;
 use reqwest::header::{AUTHORIZATION, USER_AGENT};
 use sailfish::TemplateOnce;
 use serde::{Deserialize, Serialize};
-use log::debug;
 
 const API_ENDPOINT: &str = "https://api.github.com/";
 

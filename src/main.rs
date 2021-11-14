@@ -5,11 +5,18 @@ use owo_colors::colored::*;
 use rayon::prelude::*;
 use regex::Regex;
 use reqwest::blocking::Client;
-use std::{borrow::Cow, collections::HashMap, fs::{File, OpenOptions}, io::{Read, Seek, SeekFrom, Write}, path::{Path, PathBuf}, sync::{
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    fs::{File, OpenOptions},
+    io::{Read, Seek, SeekFrom, Write},
+    path::{Path, PathBuf},
+    sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
-    }};
-use version_compare::{CompOp, VersionCompare};
+    },
+};
+use version_compare::{compare_to, Cmp};
 
 mod checker;
 mod cli;
@@ -87,7 +94,11 @@ fn validate_urls(a: &HashMap<String, String>, b: &HashMap<String, String>) -> bo
     false
 }
 
-fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P, dry_run: bool) -> Result<CheckerResult> {
+fn check_update_worker<P: AsRef<Path>>(
+    client: &Client,
+    spec: P,
+    dry_run: bool,
+) -> Result<CheckerResult> {
     let s = parser::parse_spec(spec.as_ref())?;
     let current_version = s
         .get("VER")
@@ -124,8 +135,8 @@ fn check_update_worker<P: AsRef<Path>>(client: &Client, spec: P, dry_run: bool) 
             ))
         }
     }
-    if let Ok(ret) = VersionCompare::compare(current_version, new_version) {
-        if ret == CompOp::Gt {
+    if let Ok(ret) = compare_to(current_version, new_version, Cmp::Gt) {
+        if ret {
             warnings.push(format!(
                 "Possible downgrade from the current version ({} -> {})",
                 current_version, new_version
@@ -246,16 +257,19 @@ fn main() {
         .collect();
 
     print_results(&results);
-    
+
     if let Some(log_file) = args.value_of("LOG") {
         let mut f = File::create(log_file).unwrap();
-        let items: Vec<_> = results.iter().filter_map(|x| {
-            if let Ok(ret) = x {
-                Some(ret.name.clone())
-            } else {
-                None
-            }
-        }).collect();
+        let items: Vec<_> = results
+            .iter()
+            .filter_map(|x| {
+                if let Ok(ret) = x {
+                    Some(ret.name.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
         f.write_all(items.join("\n").as_bytes()).unwrap();
         info!("Wrote results to {}", log_file);
     }

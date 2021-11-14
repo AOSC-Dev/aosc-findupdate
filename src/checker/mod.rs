@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::blocking::Client;
 use std::{cmp::Ordering, collections::HashMap};
-use version_compare::{comp_op::CompOp, VersionCompare};
+use version_compare::{Cmp, compare};
 
 mod anitya;
 mod git;
@@ -52,11 +52,11 @@ pub(crate) fn extract_versions<S: AsRef<str>>(
 
 #[inline]
 pub(crate) fn version_compare(a: &str, b: &str) -> Ordering {
-    if let Ok(ret) = VersionCompare::compare(a, b) {
+    if let Ok(ret) = compare(a, b) {
         match ret {
-            CompOp::Eq => Ordering::Equal,
-            CompOp::Lt => Ordering::Less,
-            CompOp::Gt => Ordering::Greater,
+            Cmp::Eq => Ordering::Equal,
+            Cmp::Lt => Ordering::Less,
+            Cmp::Gt => Ordering::Greater,
             _ => a.cmp(&b),
         }
     } else {
