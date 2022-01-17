@@ -14,7 +14,7 @@ version-compare = "0.1"
 percent-encoding = "2.1"
 kuchiki = "0.8"
 nom = "^7"
-clap = "2.33"
+clap = "^3"
 abbs-meta-apml = { git = "https://github.com/AOSC-Dev/abbs-meta-rs", rev = "d75c0abd6cf2b5016452b036ddfbd144e6d611ed" }
 walkdir = "2.3"
 log = "0.4"
@@ -22,6 +22,8 @@ env_logger = "0.9"
 aho-corasick = "0.7"
 owo-colors = "3.1"
 sailfish = "0.3"
+# workaround for https://github.com/dtolnay/quote/issues/204
+quote = "=1.0.10"
 
 [profile.release]
 lto = true
