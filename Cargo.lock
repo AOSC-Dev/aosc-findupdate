@@ -41,7 +41,7 @@ checksum = "94a45b455c14666b85fc40a019e8ab9eb75e3a124e05494f5397122bc9eb06e0"
 
 [[package]]
 name = "aosc-findupdate"
-version = "0.1.2-alpha.0"
+version = "0.1.2"
 dependencies = [
  "abbs-meta-apml",
  "aho-corasick",
