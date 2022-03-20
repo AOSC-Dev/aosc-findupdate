@@ -18,6 +18,8 @@ use std::{
 };
 use version_compare::{compare_to, Cmp};
 
+
+
 mod checker;
 mod cli;
 mod parser;
@@ -33,13 +35,13 @@ struct CheckerResult {
 }
 
 fn collect_spec(dir: &Path) -> Result<Vec<PathBuf>> {
-    let walker = walkdir::WalkDir::new(dir).max_depth(3);
+    let walker = walkdir::WalkDir::new(dir).min_depth(1).max_depth(3);
     let result = walker
         .into_iter()
         .filter_map(|x| {
             let entry = x.ok()?;
             if entry.file_name() == "spec" {
-                Some(PathBuf::from(entry.path()))
+                entry.path().canonicalize().ok()
             } else {
                 None
             }
@@ -50,8 +52,8 @@ fn collect_spec(dir: &Path) -> Result<Vec<PathBuf>> {
 }
 
 fn normalize_name(path: &Path) -> Cow<str> {
-    let p = path.strip_prefix("./").unwrap_or(path);
-    let p = p.parent().unwrap_or(path);
+    let p = path.parent().unwrap_or(path);
+    let p = p.file_name().unwrap_or(p.as_os_str());
 
     p.to_string_lossy()
 }
