@@ -18,8 +18,6 @@ use std::{
 };
 use version_compare::{compare_to, Cmp};
 
-
-
 mod checker;
 mod cli;
 mod parser;
