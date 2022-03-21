@@ -97,7 +97,7 @@ fn read_package_list<P: AsRef<Path>>(filename: P, depth: usize) -> Result<Vec<St
 }
 
 /// Expand the packages list to an array of packages
-pub(crate) fn expand_package_list<'a, P: AsRef<Path>, I: IntoIterator<Item = P>>(
+pub(crate) fn expand_package_list<P: AsRef<Path>, I: IntoIterator<Item = P>>(
     packages: I,
 ) -> Vec<String> {
     let mut expanded = Vec::new();

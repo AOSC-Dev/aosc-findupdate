@@ -18,7 +18,7 @@ impl UpdateChecker for GitWebChecker {
     {
         Ok(GitWebChecker {
             url: must_have!(config, "url", "GitWeb project URL")?.to_string(),
-            pattern: config.get("pattern").map(|s| s.clone()),
+            pattern: config.get("pattern").cloned(),
         })
     }
 
@@ -36,7 +36,7 @@ impl UpdateChecker for GitWebChecker {
 
         for m in document
             .select(".name")
-            .or_else(|_| Err(anyhow!("HTML selector error: class 'name' not found.")))?
+            .map_err(|_| anyhow!("HTML selector error: class 'name' not found."))?
         {
             let node = m.as_node();
             versions.push(node.text_contents());
@@ -46,7 +46,7 @@ impl UpdateChecker for GitWebChecker {
             versions = extract_versions(pattern, &versions)?;
         }
 
-        if versions.len() < 1 {
+        if versions.is_empty() {
             return Err(anyhow!("No tags found."));
         } else if versions.len() == 1 {
             return Ok(versions[0].to_string());

@@ -60,7 +60,7 @@ impl UpdateChecker for GitHubChecker {
         Self: Sized + UpdateChecker,
     {
         let repo = must_have!(config, "repo", "Repository slug")?.to_string();
-        let pattern = config.get("pattern").map(|s| s.clone());
+        let pattern = config.get("pattern").cloned();
         let sort_version = config
             .get("sort_version")
             .map(|s| s == "true")
@@ -110,11 +110,11 @@ impl UpdateChecker for GitHubChecker {
             payload = extract_versions(pattern, &payload)?;
         }
         debug!("after filter: {:?}", payload);
-        if payload.len() < 1 {
+        if payload.is_empty() {
             return Err(anyhow!("GitHub didn't return any tags!"));
         }
         if self.sort_version {
-            payload.sort_unstable_by(|b, a| version_compare(&a, &b));
+            payload.sort_unstable_by(|b, a| version_compare(a, b));
         }
 
         Ok(payload.first().unwrap().clone())

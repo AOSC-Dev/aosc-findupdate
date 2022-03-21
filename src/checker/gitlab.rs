@@ -30,9 +30,9 @@ impl UpdateChecker for GitLabChecker {
         let repo = must_have!(config, "repo", "Repository slug or Project ID")?.to_string();
         let instance = config
             .get("instance")
-            .map(|s| s.clone())
+            .cloned()
             .unwrap_or_else(|| API_ENDPOINT.to_string());
-        let pattern = config.get("pattern").map(|s| s.clone());
+        let pattern = config.get("pattern").cloned();
         let sort_version = config
             .get("sort_version")
             .map(|s| s == "true")
@@ -61,14 +61,14 @@ impl UpdateChecker for GitLabChecker {
             payload = extract_versions(pattern, &payload)?;
         }
         debug!("after filter: {:?}", payload);
-        if payload.len() < 1 {
+        if payload.is_empty() {
             return Err(anyhow!(
                 "GitLab ({}) didn't return any tags!",
                 self.instance
             ));
         }
         if self.sort_version {
-            payload.sort_unstable_by(|b, a| version_compare(&a, &b));
+            payload.sort_unstable_by(|b, a| version_compare(a, b));
         }
 
         Ok(payload.first().unwrap().clone())

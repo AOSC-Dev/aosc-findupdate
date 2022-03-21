@@ -16,7 +16,7 @@ use nom::{
 use reqwest::blocking::Client;
 use reqwest::header::USER_AGENT;
 
-const SIMULATED_GIT_VERSION: &'static str = "2.31.1";
+const SIMULATED_GIT_VERSION: &str = "2.31.1";
 
 // parser-combinators for parsing Git on-wire format
 fn first_tuple(input: &[u8]) -> IResult<&[u8], &[u8]> {
@@ -36,7 +36,7 @@ fn parse_git_manifest(input: &[u8]) -> IResult<&[u8], Vec<(&[u8], &[u8])>> {
 }
 // end of parser-combinators
 
-fn collect_git_tags<'a>(input: &'a [u8]) -> Result<Vec<&'a str>> {
+fn collect_git_tags(input: &[u8]) -> Result<Vec<&str>> {
     let tuples = parse_git_manifest(input).map_err(|e| anyhow!("Parser error: {:?}", e))?;
     let tags: Vec<_> = tuples
         .1
@@ -66,7 +66,7 @@ impl UpdateChecker for GitChecker {
         Self: Sized + UpdateChecker,
     {
         let url = must_have!(config, "url", "Repository URL")?.to_string();
-        let pattern = config.get("pattern").map(|s| s.clone());
+        let pattern = config.get("pattern").cloned();
 
         Ok(GitChecker { url, pattern })
     }
@@ -87,7 +87,7 @@ impl UpdateChecker for GitChecker {
         if let Some(pattern) = &self.pattern {
             tags = extract_versions(pattern, &tags)?;
         }
-        if tags.len() < 1 {
+        if tags.is_empty() {
             return Err(anyhow!("Git ({}) didn't return any tags!", self.url));
         }
         tags.sort_unstable_by(|b, a| version_compare(a, b));

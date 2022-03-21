@@ -48,7 +48,7 @@ impl UpdateChecker for AnityaChecker {
         } else {
             payload.versions
         };
-        if versions.len() < 1 {
+        if versions.is_empty() {
             return Err(anyhow!("Anitya didn't return any stable versions!"));
         }
 

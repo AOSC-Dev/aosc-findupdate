@@ -1,7 +1,7 @@
-use clap::{App, Arg};
+use clap::{Arg, Command};
 
-pub fn build_cli() -> App<'static> {
-    App::new("aosc-findupdate")
+pub fn build_cli() -> Command<'static> {
+    Command::new("aosc-findupdate")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Find updated packages in the abbs tree")
         .arg(

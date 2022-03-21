@@ -49,7 +49,7 @@ fn collect_spec(dir: &Path) -> Result<Vec<PathBuf>> {
     Ok(result)
 }
 
-fn normalize_name<'a>(path: &'a Path) -> Cow<str> {
+fn normalize_name(path: &Path) -> Cow<str> {
     let p = path.strip_prefix("./").unwrap_or(path);
     let p = p.parent().unwrap_or(path);
 
@@ -114,7 +114,7 @@ fn check_update_worker<P: AsRef<Path>>(
     let config = parser::parse_check_update(&config_line)?;
     let new_version = checker::check_update(&config, client)?;
     let new_version = new_version.trim();
-    let new_version = new_version.strip_prefix("v").unwrap_or(new_version);
+    let new_version = new_version.strip_prefix('v').unwrap_or(new_version);
     let name = normalize_name(spec.as_ref()).to_string();
     let mut warnings = Vec::new();
     if current_version == new_version {
@@ -126,7 +126,7 @@ fn check_update_worker<P: AsRef<Path>>(
         });
     }
     let snapshot_version = AhoCorasickBuilder::new().build(VCS_VERSION_NUMBERS);
-    if current_version.contains("+") {
+    if current_version.contains('+') {
         warnings.push(format!("Compound version number '{}'", current_version));
         if let Some(version) = snapshot_version.find(current_version) {
             warnings.push(format!(
@@ -155,7 +155,7 @@ fn check_update_worker<P: AsRef<Path>>(
         match abbs_meta_apml::parse(&modified, &mut new_ctx) {
             Ok(_) => {
                 if validate_urls(&s, &new_ctx) {
-                    warnings.push(format!("Hardcoded URLs detected."));
+                    warnings.push("Hardcoded URLs detected.".to_string());
                 }
             }
             Err(err) => {
@@ -175,19 +175,17 @@ fn check_update_worker<P: AsRef<Path>>(
 fn print_results(results: &[Result<CheckerResult>]) {
     println!("The following packages were updated:");
     println!("{:<30}{:^44}\t\tIssues", "Name", "Version");
-    for result in results {
-        if let Ok(result) = result {
-            if result.before == result.after {
-                continue;
-            }
-            println!(
-                "{:<30}{:>20} -> {:<20}\t\t{}",
-                result.name.cyan(),
-                result.before.red(),
-                result.after.green(),
-                result.warnings.join("; ").yellow()
-            );
+    for result in results.iter().flatten() {
+        if result.before == result.after {
+            continue;
         }
+        println!(
+            "{:<30}{:>20} -> {:<20}\t\t{}",
+            result.name.cyan(),
+            result.before.red(),
+            result.after.green(),
+            result.warnings.join("; ").yellow()
+        );
     }
     println!("\nErrors:");
     for result in results {
@@ -245,15 +243,12 @@ fn main() {
 
     let results: Vec<_> = files
         .par_iter()
-        .map_init(
-            || Client::new(),
-            |c, f| {
-                let name = normalize_name(f);
-                let current = current.fetch_add(1, Ordering::SeqCst);
-                info!("[{}/{}] Checking {} ...", current, total, &name);
-                check_update_worker(c, f, dry_run).map_err(|e| anyhow!("{}: {:?}", name.cyan(), e))
-            },
-        )
+        .map_init(Client::new, |c, f| {
+            let name = normalize_name(f);
+            let current = current.fetch_add(1, Ordering::SeqCst);
+            info!("[{}/{}] Checking {} ...", current, total, &name);
+            check_update_worker(c, f, dry_run).map_err(|e| anyhow!("{}: {:?}", name.cyan(), e))
+        })
         .collect();
 
     print_results(&results);

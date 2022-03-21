@@ -46,7 +46,7 @@ impl UpdateChecker for HTMLChecker {
                     .as_str(),
             );
         }
-        if versions.len() < 1 {
+        if versions.is_empty() {
             return Err(anyhow!("No version matches the pattern."));
         } else if versions.len() == 1 {
             return Ok(versions[0].to_string());

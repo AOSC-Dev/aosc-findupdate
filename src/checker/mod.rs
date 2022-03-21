@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use regex::Regex;
 use reqwest::blocking::Client;
 use std::{cmp::Ordering, collections::HashMap};
-use version_compare::{Cmp, compare};
+use version_compare::{compare, Cmp};
 
 mod anitya;
 mod git;
@@ -32,17 +32,17 @@ pub(crate) fn extract_versions<S: AsRef<str>>(
     let regex = Regex::new(pattern)?;
     let results = if regex.captures_len() > 1 {
         collection
-            .into_iter()
+            .iter()
             .filter_map(|x| {
                 regex
                     .captures(x.as_ref())
                     .and_then(|x| x.get(1))
-                    .and_then(|x| Some(x.as_str().to_string()))
+                    .map(|x| x.as_str().to_string())
             })
             .collect()
     } else {
         collection
-            .into_iter()
+            .iter()
             .filter_map(|x| regex.is_match(x.as_ref()).then(|| x.as_ref().to_string()))
             .collect()
     };
@@ -57,10 +57,10 @@ pub(crate) fn version_compare(a: &str, b: &str) -> Ordering {
             Cmp::Eq => Ordering::Equal,
             Cmp::Lt => Ordering::Less,
             Cmp::Gt => Ordering::Greater,
-            _ => a.cmp(&b),
+            _ => a.cmp(b),
         }
     } else {
-        a.cmp(&b)
+        a.cmp(b)
     }
 }
 
@@ -90,5 +90,5 @@ pub fn check_update(config: &HashMap<String, String>, client: &Client) -> Result
     };
     let checker = checker?;
 
-    Ok(checker.check(client)?)
+    checker.check(client)
 }
