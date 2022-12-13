@@ -276,17 +276,66 @@ fn main() {
 
     if let Some(log_file) = args.get_one::<String>("LOG") {
         let mut f = File::create(log_file).unwrap();
-        let items: Vec<_> = results
-            .iter()
-            .filter_map(|x| {
-                if let Ok(ret) = x {
-                    Some(ret.name.clone())
-                } else {
-                    None
-                }
-            })
-            .collect();
-        f.write_all(items.join("\n").as_bytes()).unwrap();
+        let items = results.iter().filter_map(|x| {
+            if let Ok(ret) = x {
+                Some(ret.name.clone())
+            } else {
+                None
+            }
+        });
+
+        let tree = get_tree(Path::new(".")).expect("Can not get tree path!");
+        let mut results = vec![];
+
+        for i in items {
+            results.push(
+                find_path(&i, &tree)
+                    .unwrap()
+                    .strip_prefix(&tree)
+                    .expect("Can not base tree path!")
+                    .to_str()
+                    .unwrap_or_else(|| panic!("Can not convert path to str: {}", i))
+                    .to_string(),
+            );
+        }
+
+        f.write_all(results.join("\n").as_bytes()).unwrap();
         info!("Wrote results to {}", log_file);
     }
+}
+
+fn get_tree(directory: &Path) -> Result<PathBuf> {
+    let mut tree = directory.canonicalize()?;
+    let mut has_groups;
+    loop {
+        has_groups = tree.join("groups").is_dir();
+        if !has_groups && tree.to_str() == Some("/") {
+            return Err(anyhow!("Cannot find ABBS tree!"));
+        }
+        if has_groups {
+            return Ok(tree.to_path_buf());
+        }
+        tree.pop();
+    }
+}
+
+fn find_path(name: &str, tree: &Path) -> Result<PathBuf> {
+    let packages = walkdir::WalkDir::new(tree).min_depth(2).max_depth(2);
+
+    let mut path = None;
+
+    for entry in packages {
+        let entry = entry?;
+        let file_name = &entry
+            .file_name()
+            .to_str()
+            .ok_or_else(|| anyhow!("Can not convert str"))?;
+
+        if file_name == &name {
+            path = Some(entry.path().to_path_buf());
+            break;
+        }
+    }
+
+    path.ok_or_else(|| anyhow!("Can not get package path: {}", name))
 }
