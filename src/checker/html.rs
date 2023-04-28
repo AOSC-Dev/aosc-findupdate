@@ -64,7 +64,7 @@ fn test_check_anitya() {
     let mut options = HashMap::new();
     options.insert(
         "url".to_string(),
-        "https://repo.aosc.io/misc/l10n/".to_string(),
+        "https://repo.aosc.io/aosc-l10n/".to_string(),
     );
     options.insert("pattern".to_string(), "zh_CN_l10n_(.+?)\\.pdf".to_string());
     let client = Client::new();
