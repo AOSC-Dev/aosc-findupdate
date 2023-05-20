@@ -8,7 +8,6 @@ mod anitya;
 mod git;
 mod github;
 mod gitlab;
-mod gitweb;
 mod html;
 
 #[macro_export]
@@ -83,7 +82,6 @@ pub fn check_update(config: &HashMap<String, String>, client: &Client) -> Result
         "anitya" => Ok(use_this!(anitya::AnityaChecker, config)),
         "github" => Ok(use_this!(github::GitHubChecker, config)),
         "gitlab" => Ok(use_this!(gitlab::GitLabChecker, config)),
-        "gitweb" => Ok(use_this!(gitweb::GitWebChecker, config)),
         "git" => Ok(use_this!(git::GitChecker, config)),
         "html" => Ok(use_this!(html::HTMLChecker, config)),
         _ => Err(anyhow!("Unknown type")),
