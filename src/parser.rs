@@ -1,19 +1,18 @@
 use anyhow::{anyhow, Result};
 use log::{info, warn};
-use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_until},
-    character::complete::alphanumeric1,
-    combinator::recognize,
-    multi::many1,
-    sequence::{separated_pair, terminated},
-    IResult,
-};
 use std::{
     collections::HashMap,
     fs::File,
     io::{BufRead, BufReader, Read},
     path::Path,
+};
+use winnow::{
+    ascii::alphanumeric1,
+    branch::alt,
+    bytes::{tag, take_until0},
+    combinator::repeat,
+    sequence::{separated_pair, terminated},
+    IResult, Parser,
 };
 
 type Context = HashMap<String, String>;
@@ -21,23 +20,27 @@ type Context = HashMap<String, String>;
 const CONFIG_SEPARATOR: &str = "::";
 
 fn take_type(input: &str) -> IResult<&str, &str> {
-    take_until(CONFIG_SEPARATOR)(input)
+    take_until0(CONFIG_SEPARATOR).parse_next(input)
+}
+
+fn kv_key_inner(input: &str) -> IResult<&str, ()> {
+    repeat(1.., alt((alphanumeric1, tag("_")))).parse_next(input)
 }
 
 fn kv_key(input: &str) -> IResult<&str, &str> {
-    recognize(many1(alt((alphanumeric1, tag("_")))))(input)
+    kv_key_inner.recognize().parse_next(input)
 }
 
 fn kv_pair(input: &str) -> IResult<&str, (&str, &str)> {
-    separated_pair(kv_key, tag("="), take_until(";"))(input)
+    separated_pair(kv_key, tag("="), take_until0(";")).parse_next(input)
 }
 
 fn kv_pairs(input: &str) -> IResult<&str, Vec<(&str, &str)>> {
-    many1(terminated(kv_pair, tag(";")))(input)
+    repeat(1.., terminated(kv_pair, tag(";"))).parse_next(input)
 }
 
 fn config_line(input: &str) -> IResult<&str, (&str, Vec<(&str, &str)>)> {
-    separated_pair(take_type, tag(CONFIG_SEPARATOR), kv_pairs)(input)
+    separated_pair(take_type, tag(CONFIG_SEPARATOR), kv_pairs).parse_next(input)
 }
 
 pub(crate) fn parse_spec<P: AsRef<Path>>(spec: P) -> Result<Context> {

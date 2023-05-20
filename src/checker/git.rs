@@ -3,36 +3,34 @@ use std::collections::HashMap;
 use super::{extract_versions, version_compare, UpdateChecker};
 use crate::must_have;
 use anyhow::{anyhow, Result};
-use nom::{
-    bytes::complete::take_while1,
-    character::{
-        complete::{multispace1, not_line_ending, space1},
-        is_hex_digit,
-    },
-    multi::many1,
-    sequence::{separated_pair, terminated},
-    IResult,
-};
 use reqwest::blocking::Client;
 use reqwest::header::USER_AGENT;
+use winnow::{
+    ascii::{multispace1, not_line_ending, space1},
+    combinator::repeat,
+    sequence::{separated_pair, terminated},
+    stream::AsChar,
+    token::take_while,
+    IResult, Parser,
+};
 
 const SIMULATED_GIT_VERSION: &str = "2.31.1";
 
 // parser-combinators for parsing Git on-wire format
 fn first_tuple(input: &[u8]) -> IResult<&[u8], &[u8]> {
-    take_while1(|c| is_hex_digit(c) || c == b'#')(input)
+    take_while(1.., |c: u8| c.is_hex_digit() || c == b'#').parse_next(input)
 }
 
 fn kv_pair(input: &[u8]) -> IResult<&[u8], (&[u8], &[u8])> {
-    separated_pair(first_tuple, space1, not_line_ending)(input)
+    separated_pair(first_tuple, space1, not_line_ending).parse_next(input)
 }
 
 fn single_line(input: &[u8]) -> IResult<&[u8], (&[u8], &[u8])> {
-    terminated(kv_pair, multispace1)(input)
+    terminated(kv_pair, multispace1).parse_next(input)
 }
 
 fn parse_git_manifest(input: &[u8]) -> IResult<&[u8], Vec<(&[u8], &[u8])>> {
-    many1(single_line)(input)
+    repeat(1.., single_line).parse_next(input)
 }
 // end of parser-combinators
 

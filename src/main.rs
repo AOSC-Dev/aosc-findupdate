@@ -128,7 +128,7 @@ fn check_update_worker<P: AsRef<Path>>(
     let snapshot_version = AhoCorasickBuilder::new().build(VCS_VERSION_NUMBERS);
     if current_version.contains('+') {
         warnings.push(format!("Compound version number '{}'", current_version));
-        if let Some(version) = snapshot_version.find(current_version) {
+        if let Some(version) = snapshot_version?.find(current_version) {
             warnings.push(format!(
                 "Version number indicates a snapshot ({}) is used",
                 VCS_VERSION_NUMBERS[version.pattern()]
@@ -199,17 +199,17 @@ fn main() {
     let args = cli::build_cli().get_matches();
     env_logger::init();
     let mut pattern = None;
-    if let Some(p) = args.value_of("INCLUDE") {
+    if let Some(p) = args.get_one::<String>("INCLUDE") {
         pattern = Some(Regex::new(p).unwrap());
     }
-    let dry_run = args.is_present("DRY_RUN");
-    let workdir = if let Some(d) = args.value_of("DIR") {
+    let dry_run = args.get_flag("DRY_RUN");
+    let workdir = if let Some(d) = args.get_one::<String>("DIR") {
         Path::new(d).canonicalize().unwrap()
     } else {
         Path::new(".").canonicalize().unwrap()
     };
 
-    let mut files = if let Some(list) = args.value_of("FILE") {
+    let mut files = if let Some(list) = args.get_one::<String>("FILE") {
         let path = Path::new(list).canonicalize().unwrap();
         std::env::set_current_dir(workdir).expect("Failed to set current directory");
         let list = parser::expand_package_list(&[&path]);
@@ -253,7 +253,7 @@ fn main() {
 
     print_results(&results);
 
-    if let Some(log_file) = args.value_of("LOG") {
+    if let Some(log_file) = args.get_one::<String>("LOG") {
         let mut f = File::create(log_file).unwrap();
         let items: Vec<_> = results
             .iter()
