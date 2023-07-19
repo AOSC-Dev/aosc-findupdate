@@ -7,6 +7,7 @@ pub fn build_cli() -> Command {
         .arg(
             Arg::new("DRY_RUN")
                 .long("dry-run")
+                .action(clap::ArgAction::SetTrue)
                 .help("Do not update the files in the abbs tree"),
         )
         .arg(
@@ -32,5 +33,11 @@ pub fn build_cli() -> Command {
                 .short('d')
                 .num_args(1)
                 .help("Specify the directory to the abbs tree"),
+        )
+        .arg(
+            Arg::new("COMPLY")
+            .short('c')
+            .action(clap::ArgAction::SetTrue)
+            .help("Modify version strings to comply with the AOSC Package Styling Manual")
         )
 }

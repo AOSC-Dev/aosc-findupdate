@@ -14,12 +14,14 @@ use std::{
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
-    },
+    }
 };
+use crate::filter::VersionStr;
 use version_compare::{compare_to, Cmp};
 
 mod checker;
 mod cli;
+mod filter;
 mod parser;
 
 const VCS_VERSION_NUMBERS: &[&str] = &["+git", "+hg", "+svn", "+bzr"];
@@ -98,6 +100,7 @@ fn check_update_worker<P: AsRef<Path>>(
     client: &Client,
     spec: P,
     dry_run: bool,
+    comply: bool,
 ) -> Result<CheckerResult> {
     let s = parser::parse_spec(spec.as_ref())?;
     let current_version = s
@@ -110,13 +113,22 @@ fn check_update_worker<P: AsRef<Path>>(
             spec.as_ref().display()
         )
     })?;
+    let mut warnings = Vec::new();
     let config_line = config_line.to_owned() + ";"; // compensate for the parser quirk
     let config = parser::parse_check_update(&config_line)?;
     let new_version = checker::check_update(&config, client)?;
     let new_version = new_version.trim();
     let new_version = new_version.strip_prefix('v').unwrap_or(new_version);
+    let new_version = if comply {
+        let new_version_before_modification = new_version.clone();
+        let complied = new_version.compily_with_aosc();
+        warnings.push(format!("Compliance mode enabled, was '{}'", new_version_before_modification));
+        complied
+    } else {
+        new_version.to_string()
+    };
+    let new_version = new_version.as_str();
     let name = normalize_name(spec.as_ref()).to_string();
-    let mut warnings = Vec::new();
     if current_version == new_version {
         return Ok(CheckerResult {
             name,
@@ -126,7 +138,7 @@ fn check_update_worker<P: AsRef<Path>>(
         });
     }
     let snapshot_version = AhoCorasickBuilder::new().build(VCS_VERSION_NUMBERS);
-    if current_version.contains('+') {
+    if current_version.contains('+') && !comply {
         warnings.push(format!("Compound version number '{}'", current_version));
         if let Some(version) = snapshot_version?.find(current_version) {
             warnings.push(format!(
@@ -203,6 +215,7 @@ fn main() {
         pattern = Some(Regex::new(p).unwrap());
     }
     let dry_run = args.get_flag("DRY_RUN");
+    let comply_with_aosc = args.get_flag("COMPLY");
     let workdir = if let Some(d) = args.get_one::<String>("DIR") {
         Path::new(d).canonicalize().unwrap()
     } else {
@@ -247,7 +260,7 @@ fn main() {
             let name = normalize_name(f);
             let current = current.fetch_add(1, Ordering::SeqCst);
             info!("[{}/{}] Checking {} ...", current, total, &name);
-            check_update_worker(c, f, dry_run).map_err(|e| anyhow!("{}: {:?}", name.cyan(), e))
+            check_update_worker(c, f, dry_run, comply_with_aosc).map_err(|e| anyhow!("{}: {:?}", name.cyan(), e))
         })
         .collect();
 
