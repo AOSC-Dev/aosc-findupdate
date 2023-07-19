@@ -40,4 +40,10 @@ pub fn build_cli() -> Command {
             .action(clap::ArgAction::SetTrue)
             .help("Modify version strings to comply with the AOSC Package Styling Manual")
         )
+        .arg(
+            Arg::new("VERSION_ONLY")
+            .short('x')
+            .action(clap::ArgAction::SetTrue)
+            .help("Print out the updated version only, or nothing if no update was found")
+        )
 }
