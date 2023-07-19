@@ -184,7 +184,15 @@ fn check_update_worker<P: AsRef<Path>>(
     })
 }
 
-fn print_results(results: &[Result<CheckerResult>]) {
+fn print_results(results: &[Result<CheckerResult>], version_only: bool) {
+    if version_only {
+        for result in results.iter().flatten() {
+            if result.before == result.after {
+                continue;
+            }
+            println!("{}", result.after);
+        }
+    } else {
     println!("The following packages were updated:");
     println!("{:<30}{:^44}\t\tIssues", "Name", "Version");
     for result in results.iter().flatten() {
@@ -206,6 +214,7 @@ fn print_results(results: &[Result<CheckerResult>]) {
         }
     }
 }
+}
 
 fn main() {
     let args = cli::build_cli().get_matches();
@@ -216,6 +225,7 @@ fn main() {
     }
     let dry_run = args.get_flag("DRY_RUN");
     let comply_with_aosc = args.get_flag("COMPLY");
+    let version_only = args.get_flag("VERSION_ONLY");
     let workdir = if let Some(d) = args.get_one::<String>("DIR") {
         Path::new(d).canonicalize().unwrap()
     } else {
@@ -264,7 +274,7 @@ fn main() {
         })
         .collect();
 
-    print_results(&results);
+    print_results(&results, version_only);
 
     if let Some(log_file) = args.get_one::<String>("LOG") {
         let mut f = File::create(log_file).unwrap();
