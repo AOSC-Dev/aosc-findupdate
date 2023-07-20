@@ -187,9 +187,6 @@ fn check_update_worker<P: AsRef<Path>>(
 fn print_results(results: &[Result<CheckerResult>], version_only: bool) {
     if version_only {
         for result in results.iter().flatten() {
-            if result.before == result.after {
-                continue;
-            }
             println!("{}", result.after);
         }
     } else {
