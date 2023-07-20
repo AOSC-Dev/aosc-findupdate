@@ -23,7 +23,7 @@ const REGEX_UNDERSCORES: &str = r"^\d+(?:_[0-9a-zA-Z]+)+$";
 /// e.g. `4.5-rc1`
 ///
 /// We replace the symbol with a plus sign (`+`).
-const REGEX_RELEASE_TYPES: &str = r"^\d+(?:\.\d+)+[-_~^]*(?:rc|beta|alpha)\d*$";
+const REGEX_RELEASE_TYPES: &str = r"^\d+(?:\.\d+)+[-_~^]*(?:rc|a|alpha|b|beta)\d*$";
 /// Matches version strings with revisions.
 ///
 /// e.g. `5.4.3-2`
@@ -94,7 +94,7 @@ impl VersionStr for str {
                 filtered_ver = replacer.replace_all(&filtered_ver.as_str(), ".").to_string();
             }
             VersioningType::ReleaseTypes => {
-                let replacer = Regex::new(r"[-+~^]*((?:rc|alpha|beta)\S+)").unwrap();
+                let replacer = Regex::new(r"[-+~^]*((?:rc|alpha|a|beta|b)\S+)").unwrap();
                 filtered_ver = replacer.replace_all(&filtered_ver.as_str(), "~$1").to_string();
             }
             VersioningType::Revision => {
@@ -117,6 +117,8 @@ fn test_version_type() {
     let version_str_with_rc = &"0.9.1rc1";
     let version_str_with_rc_and_dash = &"2.16-rc1";
     let version_str_with_alpha = &"3.0-alpha5";
+    let version_str_with_shortned_alpha = &"2.4a1";
+    let version_str_with_shortned_beta = &"2.3b3";
 
     assert_eq!(version_type(normal_version_str), VersioningType::Normal);
     assert_eq!(version_type(version_str_with_letter_notation), VersioningType::LetterNotation);
@@ -126,6 +128,8 @@ fn test_version_type() {
     assert_eq!(version_type(version_str_with_alpha), VersioningType::ReleaseTypes);
     assert_eq!(version_type(version_str_with_rc), VersioningType::ReleaseTypes);
     assert_eq!(version_type(version_str_with_rc_and_dash), VersioningType::ReleaseTypes);
+    assert_eq!(version_type(version_str_with_shortned_alpha), VersioningType::ReleaseTypes);
+    assert_eq!(version_type(version_str_with_shortned_beta), VersioningType::ReleaseTypes);
 }
 
 #[test]
@@ -138,6 +142,8 @@ fn test_comply_with_aosc() {
     let version_str_with_rc = &"0.9.1rc1";
     let version_str_with_rc_and_dash = &"2.16-rc1";
     let version_str_with_alpha = &"3.0-alpha5";
+    let version_str_with_shortned_alpha = &"2.4a1";
+    let version_str_with_shortned_beta = &"2.3b3";
     assert_eq!(normal_version_str.compily_with_aosc(), String::from(normal_version_str.to_owned()));
     assert_eq!(version_str_with_letter_notation.compily_with_aosc(), String::from("1.2.3p6"));
     assert_eq!(version_str_with_dashes.compily_with_aosc(), String::from("2023.07.18"));
@@ -146,4 +152,6 @@ fn test_comply_with_aosc() {
     assert_eq!(version_str_with_rc.compily_with_aosc(), String::from("0.9.1~rc1"));
     assert_eq!(version_str_with_rc_and_dash.compily_with_aosc(), String::from("2.16~rc1"));
     assert_eq!(version_str_with_alpha.compily_with_aosc(), String::from("3.0~alpha5"));
+    assert_eq!(version_str_with_shortned_alpha.compily_with_aosc(), String::from("2.4~a1"));
+    assert_eq!(version_str_with_shortned_beta.compily_with_aosc(), String::from("2.3~b3"));
 }
