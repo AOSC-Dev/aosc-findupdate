@@ -44,6 +44,6 @@ pub fn build_cli() -> Command {
             Arg::new("VERSION_ONLY")
             .short('x')
             .action(clap::ArgAction::SetTrue)
-            .help("Print out the updated version only, or nothing if no update was found")
+            .help("Print out the updated version only, even if no update was found")
         )
 }
