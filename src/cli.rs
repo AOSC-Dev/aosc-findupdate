@@ -36,14 +36,14 @@ pub fn build_cli() -> Command {
         )
         .arg(
             Arg::new("COMPLY")
-            .short('c')
-            .action(clap::ArgAction::SetTrue)
-            .help("Modify version strings to comply with the AOSC Package Styling Manual")
+                .short('c')
+                .action(clap::ArgAction::SetTrue)
+                .help("Modify version strings to comply with the AOSC Package Styling Manual"),
         )
         .arg(
             Arg::new("VERSION_ONLY")
-            .short('x')
-            .action(clap::ArgAction::SetTrue)
-            .help("Print out the updated version only, even if no update was found")
+                .short('x')
+                .action(clap::ArgAction::SetTrue)
+                .help("Print out the updated version only, even if no update was found"),
         )
 }

@@ -1,3 +1,4 @@
+use crate::filter::VersionStr;
 use aho_corasick::AhoCorasickBuilder;
 use anyhow::{anyhow, Result};
 use log::{info, warn};
@@ -14,9 +15,8 @@ use std::{
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
-    }
+    },
 };
-use crate::filter::VersionStr;
 use version_compare::{compare_to, Cmp};
 
 mod checker;
@@ -122,7 +122,10 @@ fn check_update_worker<P: AsRef<Path>>(
     let new_version = if comply {
         let new_version_before_modification = new_version.clone();
         let complied = new_version.compily_with_aosc();
-        warnings.push(format!("Compliance mode enabled, was '{}'", new_version_before_modification));
+        warnings.push(format!(
+            "Compliance mode enabled, was '{}'",
+            new_version_before_modification
+        ));
         complied
     } else {
         new_version.to_string()
@@ -190,27 +193,27 @@ fn print_results(results: &[Result<CheckerResult>], version_only: bool) {
             println!("{}", result.after);
         }
     } else {
-    println!("The following packages were updated:");
-    println!("{:<30}{:^44}\t\tIssues", "Name", "Version");
-    for result in results.iter().flatten() {
-        if result.before == result.after {
-            continue;
+        println!("The following packages were updated:");
+        println!("{:<30}{:^44}\t\tIssues", "Name", "Version");
+        for result in results.iter().flatten() {
+            if result.before == result.after {
+                continue;
+            }
+            println!(
+                "{:<30}{:>20} -> {:<20}\t\t{}",
+                result.name.cyan(),
+                result.before.red(),
+                result.after.green(),
+                result.warnings.join("; ").yellow()
+            );
         }
-        println!(
-            "{:<30}{:>20} -> {:<20}\t\t{}",
-            result.name.cyan(),
-            result.before.red(),
-            result.after.green(),
-            result.warnings.join("; ").yellow()
-        );
-    }
-    println!("\nErrors:");
-    for result in results {
-        if let Err(e) = result {
-            println!("{}", e.bold());
+        println!("\nErrors:");
+        for result in results {
+            if let Err(e) = result {
+                println!("{}", e.bold());
+            }
         }
     }
-}
 }
 
 fn main() {
@@ -267,7 +270,8 @@ fn main() {
             let name = normalize_name(f);
             let current = current.fetch_add(1, Ordering::SeqCst);
             info!("[{}/{}] Checking {} ...", current, total, &name);
-            check_update_worker(c, f, dry_run, comply_with_aosc).map_err(|e| anyhow!("{}: {:?}", name.cyan(), e))
+            check_update_worker(c, f, dry_run, comply_with_aosc)
+                .map_err(|e| anyhow!("{}: {:?}", name.cyan(), e))
         })
         .collect();
 
