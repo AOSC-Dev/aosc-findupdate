@@ -8,38 +8,36 @@ use std::{
 };
 use winnow::{
     ascii::alphanumeric1,
-    branch::alt,
-    bytes::{tag, take_until0},
-    combinator::repeat,
-    sequence::{separated_pair, terminated},
-    IResult, Parser,
+    combinator::{alt, repeat, separated_pair, terminated},
+    token::{tag, take_until0},
+    PResult, Parser,
 };
 
 type Context = HashMap<String, String>;
 
 const CONFIG_SEPARATOR: &str = "::";
 
-fn take_type(input: &str) -> IResult<&str, &str> {
+fn take_type<'a>(input: &mut &'a str) -> PResult<&'a str> {
     take_until0(CONFIG_SEPARATOR).parse_next(input)
 }
 
-fn kv_key_inner(input: &str) -> IResult<&str, ()> {
+fn kv_key_inner<'a>(input: &mut &'a str) -> PResult<()> {
     repeat(1.., alt((alphanumeric1, tag("_")))).parse_next(input)
 }
 
-fn kv_key(input: &str) -> IResult<&str, &str> {
+fn kv_key<'a>(input: &mut &'a str) -> PResult<&'a str> {
     kv_key_inner.recognize().parse_next(input)
 }
 
-fn kv_pair(input: &str) -> IResult<&str, (&str, &str)> {
+fn kv_pair<'a>(input: &mut &'a str) -> PResult<(&'a str, &'a str)> {
     separated_pair(kv_key, tag("="), take_until0(";")).parse_next(input)
 }
 
-fn kv_pairs(input: &str) -> IResult<&str, Vec<(&str, &str)>> {
+fn kv_pairs<'a>(input: &mut &'a str) -> PResult<Vec<(&'a str, &'a str)>> {
     repeat(1.., terminated(kv_pair, tag(";"))).parse_next(input)
 }
 
-fn config_line(input: &str) -> IResult<&str, (&str, Vec<(&str, &str)>)> {
+fn config_line<'a>(input: &mut &'a str) -> PResult<(&'a str, Vec<(&'a str, &'a str)>)> {
     separated_pair(take_type, tag(CONFIG_SEPARATOR), kv_pairs).parse_next(input)
 }
 
@@ -54,13 +52,13 @@ pub(crate) fn parse_spec<P: AsRef<Path>>(spec: P) -> Result<Context> {
     Ok(context)
 }
 
-pub(crate) fn parse_check_update(content: &str) -> Result<Context> {
+pub(crate) fn parse_check_update(content: &mut &str) -> Result<Context> {
     let parsed = config_line(content).map_err(|err| anyhow!("Invalid config line: {}", err))?;
     let mut context = HashMap::new();
     let config = parsed.1;
-    context.insert("type".to_string(), config.0.to_string());
+    context.insert("type".to_string(), content.to_string());
 
-    for (k, v) in config.1 {
+    for (k, v) in config {
         context.insert(k.to_string(), v.to_string());
     }
 
@@ -129,24 +127,34 @@ pub(crate) fn expand_package_list<P: AsRef<Path>, I: IntoIterator<Item = P>>(
 
 #[test]
 fn test_take_type() {
-    let test = "test::1";
-    assert_eq!(take_type(test), Ok(("::1", "test")));
+    let test = &mut "test::1";
+    let res = take_type(test);
+
+    assert_eq!(res, Ok("test"));
+    assert_eq!(test, &mut "::1");
 }
 
 #[test]
 fn test_kv_key() {
-    let test = "a_b123";
-    assert_eq!(kv_key(test), Ok(("", "a_b123")));
+    let test = &mut "a_b123";
+    let res = kv_key(test);
+    assert_eq!(res, Ok("a_b123"));
+    assert_eq!(test, &mut "");
 }
 
 #[test]
 fn test_kv() {
-    let test = "a=b;";
-    assert_eq!(kv_pair(test), Ok((";", ("a", "b"))));
+    let test = &mut "a=b;";
+    let res = kv_pair(test);
+    assert_eq!(res, Ok(("a", "b")));
+    assert_eq!(test, &mut ";")
 }
 
 #[test]
 fn test_kv_pairs() {
-    let test = "a=b;b=d;";
-    assert_eq!(kv_pairs(test), Ok(("", vec![("a", "b"), ("b", "d")])));
+    let test = &mut "a=b;b=d;";
+    let res = kv_pairs(test);
+
+    assert_eq!(res, Ok(vec![("a", "b"), ("b", "d")]));
+    assert_eq!(test, &mut "");
 }

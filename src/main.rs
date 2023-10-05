@@ -115,7 +115,7 @@ fn check_update_worker<P: AsRef<Path>>(
     })?;
     let mut warnings = Vec::new();
     let config_line = config_line.to_owned() + ";"; // compensate for the parser quirk
-    let config = parser::parse_check_update(&config_line)?;
+    let config = parser::parse_check_update(&mut config_line.as_str())?;
     let new_version = checker::check_update(&config, client)?;
     let new_version = new_version.trim();
     let new_version = new_version.strip_prefix('v').unwrap_or(new_version);

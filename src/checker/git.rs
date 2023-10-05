@@ -7,37 +7,35 @@ use reqwest::blocking::Client;
 use reqwest::header::USER_AGENT;
 use winnow::{
     ascii::{multispace1, not_line_ending, space1},
-    combinator::repeat,
-    sequence::{separated_pair, terminated},
+    combinator::{repeat, separated_pair, terminated},
     stream::AsChar,
     token::take_while,
-    IResult, Parser,
+    PResult, Parser,
 };
 
 const SIMULATED_GIT_VERSION: &str = "2.31.1";
 
 // parser-combinators for parsing Git on-wire format
-fn first_tuple(input: &[u8]) -> IResult<&[u8], &[u8]> {
+fn first_tuple<'a>(input: &mut &'a [u8]) -> PResult<&'a [u8]> {
     take_while(1.., |c: u8| c.is_hex_digit() || c == b'#').parse_next(input)
 }
 
-fn kv_pair(input: &[u8]) -> IResult<&[u8], (&[u8], &[u8])> {
+fn kv_pair<'a>(input: &mut &'a [u8]) -> PResult<(&'a [u8], &'a [u8])> {
     separated_pair(first_tuple, space1, not_line_ending).parse_next(input)
 }
 
-fn single_line(input: &[u8]) -> IResult<&[u8], (&[u8], &[u8])> {
+fn single_line<'a>(input: &mut &'a [u8]) -> PResult<(&'a [u8], &'a [u8])> {
     terminated(kv_pair, multispace1).parse_next(input)
 }
 
-fn parse_git_manifest(input: &[u8]) -> IResult<&[u8], Vec<(&[u8], &[u8])>> {
+fn parse_git_manifest<'a>(input: &mut &'a [u8]) -> PResult<Vec<(&'a [u8], &'a [u8])>> {
     repeat(1.., single_line).parse_next(input)
 }
 // end of parser-combinators
 
-fn collect_git_tags(input: &[u8]) -> Result<Vec<&str>> {
+fn collect_git_tags<'a>(input: &mut &'a [u8]) -> Result<Vec<&'a str>> {
     let tuples = parse_git_manifest(input).map_err(|e| anyhow!("Parser error: {:?}", e))?;
     let tags: Vec<_> = tuples
-        .1
         .iter()
         .filter_map(|x| {
             if x.1.ends_with(&b"^{}"[..]) {
@@ -78,7 +76,7 @@ impl UpdateChecker for GitChecker {
             .send()?;
         resp.error_for_status_ref()?;
         let body = resp.bytes()?;
-        let mut tags = collect_git_tags(&body)?
+        let mut tags = collect_git_tags(&mut body.to_vec().as_ref())?
             .into_iter()
             .map(|x| x.to_string())
             .collect::<Vec<_>>();
@@ -96,70 +94,64 @@ impl UpdateChecker for GitChecker {
 
 #[test]
 fn first_tuple_test() {
-    let test = &b"001e# "[..];
-    assert_eq!(first_tuple(test), Ok((&b" "[..], &b"001e#"[..])));
+    let test = &mut &b"001e# "[..];
+    assert_eq!(first_tuple(test), Ok(&b"001e#"[..]));
+    assert_eq!(test, &mut &b" "[..]);
 }
 
 #[test]
 fn kv_test() {
     // blob descriptor
-    let test = &b"003fdb358a2993be0e0aa3864ed3290105dd4a544c35 refs/heads/avx512\n"[..];
+    let test = &mut &b"003fdb358a2993be0e0aa3864ed3290105dd4a544c35 refs/heads/avx512\n"[..];
     assert_eq!(
         kv_pair(test),
         Ok((
-            &b"\n"[..],
-            (
-                &b"003fdb358a2993be0e0aa3864ed3290105dd4a544c35"[..],
-                &b"refs/heads/avx512"[..]
-            )
+            &b"003fdb358a2993be0e0aa3864ed3290105dd4a544c35"[..],
+            &b"refs/heads/avx512"[..]
         ))
     );
+    assert_eq!(test, &mut &b"\n"[..]);
     // service descriptor
-    let test = &b"001e# service=git-upload-pack\n"[..];
+    let test = &mut &b"001e# service=git-upload-pack\n"[..];
     assert_eq!(
         kv_pair(test),
-        Ok((&b"\n"[..], (&b"001e#"[..], &b"service=git-upload-pack"[..])))
+        Ok((&b"001e#"[..], &b"service=git-upload-pack"[..]))
     );
+    assert_eq!(test, &mut &b"\n"[..]);
     // capability descriptor
-    let test = &b"000000fe68e3802b238b964900acac9422a70e295482243f HEAD\x00multi_ack no-done symref=HEAD:refs/heads/master agent=git/2.11.4.GIT\n"[..];
+    let test = &mut &b"000000fe68e3802b238b964900acac9422a70e295482243f HEAD\x00multi_ack no-done symref=HEAD:refs/heads/master agent=git/2.11.4.GIT\n"[..];
     assert_eq!(
         kv_pair(test),
         Ok((
-            &b"\n"[..],
-            (
-                &b"000000fe68e3802b238b964900acac9422a70e295482243f"[..],
-                &b"HEAD\x00multi_ack no-done symref=HEAD:refs/heads/master agent=git/2.11.4.GIT"[..]
-            )
+            &b"000000fe68e3802b238b964900acac9422a70e295482243f"[..],
+            &b"HEAD\x00multi_ack no-done symref=HEAD:refs/heads/master agent=git/2.11.4.GIT"[..]
         ))
     );
+    assert_eq!(test, &mut &b"\n"[..],);
 }
 
 #[test]
 fn test_multiline() {
-    let test = &b"01234abc heads\n12345bcd tags\n"[..];
+    let test = &mut &b"01234abc heads\n12345bcd tags\n"[..];
     assert_eq!(
         parse_git_manifest(test),
-        Ok((
-            &b""[..],
-            vec![
-                (&b"01234abc"[..], &b"heads"[..]),
-                (&b"12345bcd"[..], &b"tags"[..]),
-            ]
-        ))
+        Ok(vec![
+            (&b"01234abc"[..], &b"heads"[..]),
+            (&b"12345bcd"[..], &b"tags"[..]),
+        ])
     );
+    assert_eq!(test, &mut &b""[..]);
     // with caps and trailer
-    let test = &b"001e# service=git-upload-pack\n01234abc heads\n12345bcd tags\n0000"[..];
+    let test = &mut &b"001e# service=git-upload-pack\n01234abc heads\n12345bcd tags\n0000"[..];
     assert_eq!(
         parse_git_manifest(test),
-        Ok((
-            &b"0000"[..],
-            vec![
-                (&b"001e#"[..], &b"service=git-upload-pack"[..]),
-                (&b"01234abc"[..], &b"heads"[..]),
-                (&b"12345bcd"[..], &b"tags"[..]),
-            ]
-        ))
+        Ok(vec![
+            (&b"001e#"[..], &b"service=git-upload-pack"[..]),
+            (&b"01234abc"[..], &b"heads"[..]),
+            (&b"12345bcd"[..], &b"tags"[..]),
+        ])
     );
+    assert_eq!(test, &mut &b"0000"[..]);
 }
 
 #[test]
