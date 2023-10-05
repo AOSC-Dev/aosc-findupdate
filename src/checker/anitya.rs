@@ -33,9 +33,7 @@ impl UpdateChecker for AnityaChecker {
     }
 
     fn check(&self, client: &Client) -> Result<String> {
-        let resp = client
-            .get(&format!("{}{}/", API_ENDPOINT, self.id))
-            .send()?;
+        let resp = client.get(format!("{}{}/", API_ENDPOINT, self.id)).send()?;
         resp.error_for_status_ref()?;
         let payload: AnityaData = resp.json()?;
         if payload.id != self.id {

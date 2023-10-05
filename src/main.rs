@@ -235,7 +235,7 @@ fn main() {
     let mut files = if let Some(list) = args.get_one::<String>("FILE") {
         let path = Path::new(list).canonicalize().unwrap();
         std::env::set_current_dir(workdir).expect("Failed to set current directory");
-        let list = parser::expand_package_list(&[&path]);
+        let list = parser::expand_package_list([&path]);
         list.into_iter()
             .map(|x| Path::new(&x).join("spec"))
             .collect()
@@ -245,16 +245,13 @@ fn main() {
     };
 
     if let Some(pattern) = pattern {
-        files = files
-            .into_iter()
-            .filter(|x| {
-                if let Some(name) = x.parent().map(|p| p.to_string_lossy()) {
-                    pattern.is_match(&name)
-                } else {
-                    false
-                }
-            })
-            .collect();
+        files.retain(|x| {
+            if let Some(name) = x.parent().map(|p| p.to_string_lossy()) {
+                pattern.is_match(&name)
+            } else {
+                false
+            }
+        });
     }
 
     if dry_run {

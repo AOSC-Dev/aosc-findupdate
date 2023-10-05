@@ -21,7 +21,7 @@ fn take_type<'a>(input: &mut &'a str) -> PResult<&'a str> {
     take_until0(CONFIG_SEPARATOR).parse_next(input)
 }
 
-fn kv_key_inner<'a>(input: &mut &'a str) -> PResult<()> {
+fn kv_key_inner(input: &mut &str) -> PResult<()> {
     repeat(1.., alt((alphanumeric1, tag("_")))).parse_next(input)
 }
 

@@ -70,7 +70,7 @@ impl UpdateChecker for GitChecker {
     fn check(&self, client: &Client) -> Result<String> {
         // this check method uses a fake Git client implementation
         let resp = client
-            .get(&format!("{}/info/refs?service=git-upload-pack", self.url,))
+            .get(format!("{}/info/refs?service=git-upload-pack", self.url,))
             .header(USER_AGENT, format!("git/{}", SIMULATED_GIT_VERSION))
             .header("git-protocol", "version=2")
             .send()?;

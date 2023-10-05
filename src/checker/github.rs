@@ -87,7 +87,7 @@ impl UpdateChecker for GitHubChecker {
         }
         .render_once()?;
         let mut builder = client
-            .post(&format!("{}graphql", API_ENDPOINT))
+            .post(format!("{}graphql", API_ENDPOINT))
             .header(USER_AGENT, "AOSCFindUpdate/0.1.0");
         if let Ok(token) = std::env::var("GITHUB_TOKEN") {
             builder = builder.header(AUTHORIZATION, format!("token {}", token));

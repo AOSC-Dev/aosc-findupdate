@@ -53,16 +53,16 @@ fn version_type(version_string: &str) -> VersioningType {
     let matcher_underscores = Regex::new(REGEX_UNDERSCORES).unwrap();
     let matcher_release_types = Regex::new(REGEX_RELEASE_TYPES).unwrap();
     let matcher_revision = Regex::new(REGEX_REVISION).unwrap();
-    if matcher_release_types.is_match(&version_string) {
+    if matcher_release_types.is_match(version_string) {
         return VersioningType::ReleaseTypes;
     }
-    if matcher_dashes.is_match(&version_string) {
+    if matcher_dashes.is_match(version_string) {
         return VersioningType::Dashes;
     }
-    if matcher_underscores.is_match(&version_string) {
+    if matcher_underscores.is_match(version_string) {
         return VersioningType::Underscores;
     }
-    if matcher_letter_notation.is_match(&version_string) {
+    if matcher_letter_notation.is_match(version_string) {
         return VersioningType::LetterNotation;
     }
     if matcher_revision.is_match(version_string) {
@@ -83,24 +83,20 @@ impl VersionStr for str {
             }
             VersioningType::LetterNotation => {
                 let replacer = Regex::new(r"[-_~+^]").unwrap();
-                filtered_ver = replacer.replace_all(&filtered_ver.as_str(), "").to_string();
+                filtered_ver = replacer.replace_all(filtered_ver.as_str(), "").to_string();
             }
             VersioningType::Dashes => {
                 let replacer = Regex::new(r"[-_]").unwrap();
-                filtered_ver = replacer
-                    .replace_all(&filtered_ver.as_str(), ".")
-                    .to_string();
+                filtered_ver = replacer.replace_all(filtered_ver.as_str(), ".").to_string();
             }
             VersioningType::Underscores => {
                 let replacer = Regex::new(r"[-_]").unwrap();
-                filtered_ver = replacer
-                    .replace_all(&filtered_ver.as_str(), ".")
-                    .to_string();
+                filtered_ver = replacer.replace_all(filtered_ver.as_str(), ".").to_string();
             }
             VersioningType::ReleaseTypes => {
                 let replacer = Regex::new(r"[-+~^]*((?:rc|alpha|a|beta|b)\S+)").unwrap();
                 filtered_ver = replacer
-                    .replace_all(&filtered_ver.as_str(), "~$1")
+                    .replace_all(filtered_ver.as_str(), "~$1")
                     .to_string();
             }
             VersioningType::Revision => {

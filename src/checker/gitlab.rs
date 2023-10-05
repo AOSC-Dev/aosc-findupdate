@@ -48,7 +48,7 @@ impl UpdateChecker for GitLabChecker {
 
     fn check(&self, client: &Client) -> Result<String> {
         let resp = client
-            .get(&format!(
+            .get(format!(
                 "{}/api/v4/projects/{}/repository/tags",
                 self.instance,
                 percent_encode(self.repo.as_bytes(), NON_ALPHANUMERIC)
