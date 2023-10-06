@@ -14,7 +14,7 @@ version-compare = "0.1"
 percent-encoding = "2.2"
 winnow = "0.5"
 clap = "^4"
-abbs-meta-apml = { git = "https://github.com/AOSC-Dev/abbs-meta-rs", rev = "d75c0abd6cf2b5016452b036ddfbd144e6d611ed" }
+abbs-meta-apml = { git = "https://github.com/AOSC-Dev/abbs-meta-rs", rev = "4a592937b44e8bb93103edd34eff384169a3248a" }
 walkdir = "2.3"
 log = "0.4"
 env_logger = "0.10"
