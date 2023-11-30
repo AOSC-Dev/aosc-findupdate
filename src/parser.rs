@@ -56,7 +56,7 @@ pub(crate) fn parse_check_update(content: &mut &str) -> Result<Context> {
     let parsed = config_line(content).map_err(|err| anyhow!("Invalid config line: {}", err))?;
     let mut context = HashMap::new();
     let config = parsed.1;
-    context.insert("type".to_string(), content.to_string());
+    context.insert("type".to_string(), parsed.0.to_string());
 
     for (k, v) in config {
         context.insert(k.to_string(), v.to_string());
