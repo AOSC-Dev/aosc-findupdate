@@ -120,7 +120,7 @@ fn check_update_worker<P: AsRef<Path>>(
     let new_version = new_version.trim();
     let new_version = new_version.strip_prefix('v').unwrap_or(new_version);
     let new_version = if comply {
-        let new_version_before_modification = new_version.clone();
+        let new_version_before_modification = new_version;
         let complied = new_version.compily_with_aosc();
         warnings.push(format!(
             "Compliance mode enabled, was '{}'",
@@ -174,7 +174,9 @@ fn check_update_worker<P: AsRef<Path>>(
                 }
             }
             Err(err) => {
-                warnings.push(format!("Modified spec is broken: {}", err));
+                for i in err {
+                    warnings.push(format!("Modified spec is broken: {i}"));
+                }
             }
         }
     }

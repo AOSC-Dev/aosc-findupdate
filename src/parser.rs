@@ -47,7 +47,14 @@ pub(crate) fn parse_spec<P: AsRef<Path>>(spec: P) -> Result<Context> {
     f.read_to_string(&mut contents)?;
     let mut context = HashMap::new();
 
-    abbs_meta_apml::parse(&contents, &mut context)?;
+    abbs_meta_apml::parse(&contents, &mut context).map_err(|e| {
+        let mut s = String::new();
+        e.iter().for_each(|x| {
+            s.push_str(&x.to_string());
+        });
+
+        anyhow!(s)
+    })?;
 
     Ok(context)
 }
