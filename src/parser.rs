@@ -49,9 +49,13 @@ pub(crate) fn parse_spec<P: AsRef<Path>>(spec: P) -> Result<Context> {
 
     abbs_meta_apml::parse(&contents, &mut context).map_err(|e| {
         let mut s = String::new();
-        e.iter().for_each(|x| {
-            s.push_str(&x.to_string());
-        });
+        for (i, c) in e.iter().enumerate() {
+            if i != e.len() - 1 {
+                s.push_str(&format!("{c}: "));
+            } else {
+                s.push_str(&c.to_string())
+            }
+        }
 
         anyhow!(s)
     })?;
