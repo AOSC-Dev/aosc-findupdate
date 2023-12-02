@@ -12,6 +12,7 @@ use std::{
     fs::{File, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
+    process::Command,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -228,6 +229,7 @@ fn main() {
     let dry_run = args.get_flag("DRY_RUN");
     let comply_with_aosc = args.get_flag("COMPLY");
     let version_only = args.get_flag("VERSION_ONLY");
+    let update_checksum = args.get_flag("UPDATE_CHECKSUM");
     let workdir = if let Some(d) = args.get_one::<String>("DIR") {
         Path::new(d).canonicalize().unwrap()
     } else {
@@ -275,6 +277,41 @@ fn main() {
         .collect();
 
     print_results(&results, version_only);
+
+    if update_checksum {
+        // Update checksum via `acbs-build -gw`
+        // execute: sudo ciel shell -- acbs-build -gw [packages]
+        let mut packages = vec![];
+        for result in results.iter().flatten() {
+            if result.before == result.after {
+                continue;
+            }
+            packages.push(result.name.as_str());
+        }
+        let arg = packages.join(" ");
+
+        // add -E to pass CIEL_INST environment variable
+        println!(
+            "Updating checksum via: sudo -E ciel shell -- acbs-build -gw {}",
+            arg
+        );
+        if !dry_run {
+            if let Err(err) = Command::new("sudo")
+                .args([
+                    "-E",
+                    "ciel",
+                    "shell",
+                    "--",
+                    "acbs-build",
+                    "-gw",
+                    &arg,
+                ])
+                .status()
+            {
+                println!("Failed with {}", err);
+            }
+        }
+    }
 
     if let Some(log_file) = args.get_one::<String>("LOG") {
         let mut f = File::create(log_file).unwrap();
