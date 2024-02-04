@@ -42,7 +42,8 @@ pub(crate) fn extract_versions<S: AsRef<str>>(
     } else {
         collection
             .iter()
-            .filter_map(|x| regex.is_match(x.as_ref()).then(|| x.as_ref().to_string()))
+            .filter(|&x| regex.is_match(x.as_ref()))
+            .map(|x| x.as_ref().to_string())
             .collect()
     };
 

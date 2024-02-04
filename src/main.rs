@@ -297,15 +297,7 @@ fn main() {
         );
         if !dry_run {
             if let Err(err) = Command::new("sudo")
-                .args([
-                    "-E",
-                    "ciel",
-                    "shell",
-                    "--",
-                    "acbs-build",
-                    "-gw",
-                    &arg,
-                ])
+                .args(["-E", "ciel", "shell", "--", "acbs-build", "-gw", &arg])
                 .status()
             {
                 println!("Failed with {}", err);

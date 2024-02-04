@@ -37,8 +37,7 @@ impl UpdateChecker for HTMLChecker {
         let body = resp.text()?;
         let pattern = Regex::new(&self.pattern)?;
         let matches = pattern.captures_iter(&body);
-        let mut versions = Vec::new();
-        versions.reserve(10);
+        let mut versions = Vec::with_capacity(10);
         for m in matches {
             versions.push(
                 m.get(1)
