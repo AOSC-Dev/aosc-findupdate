@@ -70,6 +70,12 @@ fn normalize_name(path: &Path) -> Cow<str> {
     p.to_string_lossy()
 }
 
+fn normalize_filename(path: &Path) -> Cow<str> {
+    let p = path.file_name().unwrap_or(path.as_os_str());
+
+    p.to_string_lossy()
+}
+
 fn update_version<P: AsRef<Path>>(new: &str, spec: P) -> Result<String> {
     let mut f = OpenOptions::new()
         .read(true)
@@ -399,20 +405,20 @@ fn find_path(pkg: &str, tree: &Path) -> String {
         .strip_prefix(&tree)
         .expect(&format!("Failed to strip prefix path: {}", tree.display()));
 
-    normalize_name(path).to_string()
+    normalize_filename(path).to_string()
 }
 
 fn find_path_inner(name: &str, tree: &Path) -> Result<PathBuf> {
     let packages = WalkDir::new(tree).min_depth(2).max_depth(2);
-
     let mut path = None;
 
     for entry in packages {
         let entry = entry?;
-        let file_name = normalize_name(entry.path());
+        let p = entry.into_path();
+        let file_name = normalize_filename(&p);
 
         if file_name == name {
-            path = Some(entry.path().to_path_buf());
+            path = Some(p);
             break;
         }
     }
