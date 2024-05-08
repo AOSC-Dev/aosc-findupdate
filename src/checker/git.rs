@@ -6,7 +6,7 @@ use anyhow::{anyhow, Result};
 use reqwest::blocking::Client;
 use reqwest::header::USER_AGENT;
 use winnow::{
-    ascii::{multispace1, not_line_ending, space1},
+    ascii::{multispace1, space1, till_line_ending},
     combinator::{repeat, separated_pair, terminated},
     stream::AsChar,
     token::take_while,
@@ -21,7 +21,7 @@ fn first_tuple<'a>(input: &mut &'a [u8]) -> PResult<&'a [u8]> {
 }
 
 fn kv_pair<'a>(input: &mut &'a [u8]) -> PResult<(&'a [u8], &'a [u8])> {
-    separated_pair(first_tuple, space1, not_line_ending).parse_next(input)
+    separated_pair(first_tuple, space1, till_line_ending).parse_next(input)
 }
 
 fn single_line<'a>(input: &mut &'a [u8]) -> PResult<(&'a [u8], &'a [u8])> {

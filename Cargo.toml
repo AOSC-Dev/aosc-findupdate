@@ -5,21 +5,21 @@ authors = ["liushuyu <liushuyu011@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-reqwest = { version = "0.11", features = ["json", "cookies", "blocking"] }
+reqwest = { version = "0.12", features = ["json", "cookies", "blocking"] }
 regex = "1.8"
 rayon = "1.7"
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-version-compare = "0.1"
+version-compare = "0.2"
 percent-encoding = "2.2"
-winnow = "0.5"
+winnow = "0.6"
 clap = "^4"
 abbs-meta-apml = { git = "https://github.com/AOSC-Dev/abbs-meta-rs", rev = "4a592937b44e8bb93103edd34eff384169a3248a" }
 walkdir = "2.3"
 log = "0.4"
-env_logger = "0.10"
+env_logger = "0.11"
 aho-corasick = "1.0"
-owo-colors = "3.5"
+owo-colors = "4.0"
 sailfish = "0.8"
 
 [profile.release]

@@ -9,7 +9,7 @@ use std::{
 use winnow::{
     ascii::alphanumeric1,
     combinator::{alt, repeat, separated_pair, terminated},
-    token::{tag, take_until0},
+    token::take_until,
     PResult, Parser,
 };
 
@@ -18,11 +18,12 @@ type Context = HashMap<String, String>;
 const CONFIG_SEPARATOR: &str = "::";
 
 fn take_type<'a>(input: &mut &'a str) -> PResult<&'a str> {
-    take_until0(CONFIG_SEPARATOR).parse_next(input)
+    let mut config_separator = CONFIG_SEPARATOR;
+    config_separator.parse_next(input)
 }
 
 fn kv_key_inner(input: &mut &str) -> PResult<()> {
-    repeat(1.., alt((alphanumeric1, tag("_")))).parse_next(input)
+    repeat(1.., alt((alphanumeric1, "_"))).parse_next(input)
 }
 
 fn kv_key<'a>(input: &mut &'a str) -> PResult<&'a str> {
@@ -30,15 +31,15 @@ fn kv_key<'a>(input: &mut &'a str) -> PResult<&'a str> {
 }
 
 fn kv_pair<'a>(input: &mut &'a str) -> PResult<(&'a str, &'a str)> {
-    separated_pair(kv_key, tag("="), take_until0(";")).parse_next(input)
+    separated_pair(kv_key, "=", take_until(0.., ";")).parse_next(input)
 }
 
 fn kv_pairs<'a>(input: &mut &'a str) -> PResult<Vec<(&'a str, &'a str)>> {
-    repeat(1.., terminated(kv_pair, tag(";"))).parse_next(input)
+    repeat(1.., terminated(kv_pair, ";")).parse_next(input)
 }
 
 fn config_line<'a>(input: &mut &'a str) -> PResult<(&'a str, Vec<(&'a str, &'a str)>)> {
-    separated_pair(take_type, tag(CONFIG_SEPARATOR), kv_pairs).parse_next(input)
+    separated_pair(take_type, CONFIG_SEPARATOR, kv_pairs).parse_next(input)
 }
 
 pub(crate) fn parse_spec<P: AsRef<Path>>(spec: P) -> Result<Context> {
