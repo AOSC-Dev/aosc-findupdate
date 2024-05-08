@@ -334,6 +334,10 @@ fn main() {
         let mut f = File::create(&*path).unwrap();
         let items = results.iter().filter_map(|x| {
             if let Ok(ret) = x {
+                if ret.after == ret.before {
+                    return None;
+                }
+
                 Some(ret.name.clone())
             } else {
                 None
@@ -365,6 +369,10 @@ fn main() {
             .iter()
             .filter_map(|x| {
                 if let Ok(ret) = x {
+                    if ret.after == ret.before {
+                        return None;
+                    }
+
                     Some(CheckResultOutput {
                         name: ret.name.to_owned(),
                         before: ret.before.to_owned(),
