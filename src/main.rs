@@ -316,8 +316,14 @@ fn main() {
     }
 
     if let Some(log_file) = args.get_one::<String>("LOG") {
-        std::env::set_current_dir(&current_path).expect("Failed to set current dir");
-        let mut f = File::create(log_file).unwrap();
+        let path = Path::new(log_file);
+        let path = if path.is_absolute() {
+            Cow::Borrowed(path)
+        } else {
+            Cow::Owned(current_path.join(log_file))
+        };
+
+        let mut f = File::create(&*path).unwrap();
         let items = results.iter().filter_map(|x| {
             if let Ok(ret) = x {
                 Some(ret.name.clone())
@@ -342,12 +348,18 @@ fn main() {
         }
 
         f.write_all(results.join("\n").as_bytes()).unwrap();
-        info!("Wrote results to {}", log_file);
+        info!("Wrote results to {}", path.display());
     }
 
     if let Some(json_file) = args.get_one::<String>("JSON") {
-        std::env::set_current_dir(&current_path).expect("Failed to set current dir");
-        let mut f = File::create(json_file).unwrap();
+        let path = Path::new(json_file);
+        let path = if path.is_absolute() {
+            Cow::Borrowed(path)
+        } else {
+            Cow::Owned(current_path.join(json_file))
+        };
+
+        let mut f = File::create(&*path).unwrap();
         let tree = get_tree(Path::new(".")).expect("Can not get tree path!");
         let items = results
             .iter()
@@ -372,7 +384,7 @@ fn main() {
             .collect::<Vec<_>>();
 
         serde_json::to_writer(&mut f, &items).expect("Failed to write JSON result");
-        info!("Wrote results to {}", json_file);
+        info!("Wrote results to {}", path.display());
     }
 }
 
