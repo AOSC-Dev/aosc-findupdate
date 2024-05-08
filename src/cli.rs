@@ -52,4 +52,10 @@ pub fn build_cli() -> Command {
                 .action(clap::ArgAction::SetTrue)
                 .help("Update checksum after version bump (please setup ciel and CIEL_INST environment variable)"),
         )
+        .arg(
+            Arg::new("JSON")
+                .short('j')
+                .num_args(1)
+                .help("JSON output updated package list"),
+        )
 }

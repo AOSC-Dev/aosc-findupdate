@@ -120,6 +120,7 @@ dependencies = [
  "reqwest",
  "sailfish",
  "serde",
+ "serde_json",
  "version-compare",
  "walkdir",
  "winnow",
