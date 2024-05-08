@@ -6,6 +6,7 @@ use owo_colors::colored::*;
 use rayon::prelude::*;
 use regex::Regex;
 use reqwest::blocking::Client;
+use serde::Serialize;
 use std::{
     borrow::Cow,
     collections::HashMap,
@@ -33,6 +34,14 @@ struct CheckerResult {
     before: String,
     after: String,
     warnings: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct CheckResultOutput {
+    name: String,
+    before: String,
+    after: String,
+    path: String,
 }
 
 fn collect_spec(dir: &Path) -> Result<Vec<PathBuf>> {
@@ -332,6 +341,35 @@ fn main() {
 
         f.write_all(results.join("\n").as_bytes()).unwrap();
         info!("Wrote results to {}", log_file);
+    }
+
+    if let Some(json_file) = args.get_one::<String>("JSON") {
+        let mut f = File::create(json_file).unwrap();
+        let tree = get_tree(Path::new(".")).expect("Can not get tree path!");
+        let items = results
+            .iter()
+            .filter_map(|x| {
+                if let Ok(ret) = x {
+                    Some(CheckResultOutput {
+                        name: ret.name.clone(),
+                        before: ret.before.clone(),
+                        after: ret.after.clone(),
+                        path: find_path(&ret.name, &tree)
+                            .unwrap()
+                            .strip_prefix(&tree)
+                            .expect("Can not base tree path!")
+                            .to_str()
+                            .unwrap_or_else(|| panic!("Can not convert path to str: {}", ret.name))
+                            .to_string(),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        serde_json::to_writer(&mut f, &items).expect("Failed to write JSON result");
+        info!("Wrote results to {}", json_file);
     }
 }
 
