@@ -239,6 +239,7 @@ fn main() {
     let comply_with_aosc = args.get_flag("COMPLY");
     let version_only = args.get_flag("VERSION_ONLY");
     let update_checksum = args.get_flag("UPDATE_CHECKSUM");
+    let current_path = std::env::current_dir().expect("Failed to get current dir.");
     let workdir = if let Some(d) = args.get_one::<String>("DIR") {
         Path::new(d).canonicalize().unwrap()
     } else {
@@ -315,6 +316,7 @@ fn main() {
     }
 
     if let Some(log_file) = args.get_one::<String>("LOG") {
+        std::env::set_current_dir(&current_path).expect("Failed to set current dir");
         let mut f = File::create(log_file).unwrap();
         let items = results.iter().filter_map(|x| {
             if let Ok(ret) = x {
@@ -344,6 +346,7 @@ fn main() {
     }
 
     if let Some(json_file) = args.get_one::<String>("JSON") {
+        std::env::set_current_dir(&current_path).expect("Failed to set current dir");
         let mut f = File::create(json_file).unwrap();
         let tree = get_tree(Path::new(".")).expect("Can not get tree path!");
         let items = results
