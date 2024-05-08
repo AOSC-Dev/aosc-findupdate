@@ -405,7 +405,7 @@ fn find_path(pkg: &str, tree: &Path) -> String {
         .strip_prefix(&tree)
         .expect(&format!("Failed to strip prefix path: {}", tree.display()));
 
-    normalize_filename(path).to_string()
+    path.display().to_string()
 }
 
 fn find_path_inner(name: &str, tree: &Path) -> Result<PathBuf> {
@@ -414,7 +414,7 @@ fn find_path_inner(name: &str, tree: &Path) -> Result<PathBuf> {
 
     for entry in packages {
         let entry = entry?;
-        let p = entry.into_path();
+        let p = entry.into_path().canonicalize()?;
         let file_name = normalize_filename(&p);
 
         if file_name == name {
