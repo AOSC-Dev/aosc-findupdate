@@ -20,6 +20,7 @@ use std::{
     },
 };
 use version_compare::{compare_to, Cmp};
+use walkdir::WalkDir;
 
 mod checker;
 mod cli;
@@ -46,7 +47,7 @@ struct CheckResultOutput {
 }
 
 fn collect_spec(dir: &Path) -> Result<Vec<PathBuf>> {
-    let walker = walkdir::WalkDir::new(dir).min_depth(1).max_depth(3);
+    let walker = WalkDir::new(dir).min_depth(1).max_depth(3);
     let result = walker
         .into_iter()
         .filter_map(|x| {
@@ -337,15 +338,7 @@ fn main() {
         let mut results = vec![];
 
         for i in items {
-            results.push(
-                find_path(&i, &tree)
-                    .unwrap()
-                    .strip_prefix(&tree)
-                    .expect("Can not base tree path!")
-                    .to_str()
-                    .unwrap_or_else(|| panic!("Can not convert path to str: {}", i))
-                    .to_string(),
-            );
+            results.push(find_path(&i, &tree));
         }
 
         f.write_all(results.join("\n").as_bytes()).unwrap();
@@ -370,13 +363,7 @@ fn main() {
                         name: ret.name.to_owned(),
                         before: ret.before.to_owned(),
                         after: ret.after.to_owned(),
-                        path: find_path(&ret.name, &tree)
-                            .unwrap()
-                            .strip_prefix(&tree)
-                            .expect("Can not base tree path!")
-                            .to_str()
-                            .unwrap_or_else(|| panic!("Can not convert path to str: {}", ret.name))
-                            .to_string(),
+                        path: find_path(&ret.name, &tree),
                         warnings: ret.warnings.to_vec(),
                     })
                 } else {
@@ -405,23 +392,30 @@ fn get_tree(directory: &Path) -> Result<PathBuf> {
     }
 }
 
-fn find_path(name: &str, tree: &Path) -> Result<PathBuf> {
-    let packages = walkdir::WalkDir::new(tree).min_depth(2).max_depth(2);
+fn find_path(pkg: &str, tree: &Path) -> String {
+    let path = find_path_inner(pkg, tree).expect(&format!("Failed to find path: {}", pkg));
+
+    let path = path
+        .strip_prefix(&tree)
+        .expect(&format!("Failed to strip prefix path: {}", tree.display()));
+
+    normalize_name(path).to_string()
+}
+
+fn find_path_inner(name: &str, tree: &Path) -> Result<PathBuf> {
+    let packages = WalkDir::new(tree).min_depth(2).max_depth(2);
 
     let mut path = None;
 
     for entry in packages {
         let entry = entry?;
-        let file_name = &entry
-            .file_name()
-            .to_str()
-            .ok_or_else(|| anyhow!("Can not convert str"))?;
+        let file_name = normalize_name(entry.path());
 
-        if file_name == &name {
+        if file_name == name {
             path = Some(entry.path().to_path_buf());
             break;
         }
     }
 
-    path.ok_or_else(|| anyhow!("Can not get package path: {}", name))
+    path.ok_or_else(|| anyhow!("Failed to get package path: {}", name))
 }
