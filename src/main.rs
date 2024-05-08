@@ -42,6 +42,7 @@ struct CheckResultOutput {
     before: String,
     after: String,
     path: String,
+    warnings: Vec<String>,
 }
 
 fn collect_spec(dir: &Path) -> Result<Vec<PathBuf>> {
@@ -366,9 +367,9 @@ fn main() {
             .filter_map(|x| {
                 if let Ok(ret) = x {
                     Some(CheckResultOutput {
-                        name: ret.name.clone(),
-                        before: ret.before.clone(),
-                        after: ret.after.clone(),
+                        name: ret.name.to_owned(),
+                        before: ret.before.to_owned(),
+                        after: ret.after.to_owned(),
                         path: find_path(&ret.name, &tree)
                             .unwrap()
                             .strip_prefix(&tree)
@@ -376,6 +377,7 @@ fn main() {
                             .to_str()
                             .unwrap_or_else(|| panic!("Can not convert path to str: {}", ret.name))
                             .to_string(),
+                        warnings: ret.warnings.to_vec(),
                     })
                 } else {
                     None
