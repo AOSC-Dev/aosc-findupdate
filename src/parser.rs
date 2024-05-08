@@ -18,8 +18,7 @@ type Context = HashMap<String, String>;
 const CONFIG_SEPARATOR: &str = "::";
 
 fn take_type<'a>(input: &mut &'a str) -> PResult<&'a str> {
-    let mut config_separator = CONFIG_SEPARATOR;
-    config_separator.parse_next(input)
+    take_until(0.., CONFIG_SEPARATOR).parse_next(input)
 }
 
 fn kv_key_inner(input: &mut &str) -> PResult<()> {
