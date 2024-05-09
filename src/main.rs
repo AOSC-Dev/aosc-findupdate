@@ -323,50 +323,13 @@ fn main() {
         }
     }
 
-    if let Some(log_file) = args.get_one::<String>("LOG") {
-        let path = Path::new(log_file);
-        let path = if path.is_absolute() {
-            Cow::Borrowed(path)
-        } else {
-            Cow::Owned(current_path.join(log_file))
-        };
+    let log = args.get_one::<String>("LOG");
+    let json = args.get_one::<String>("JSON");
+    if log.is_some() || json.is_some() {
+        let tree = get_tree(Path::new(".")).expect("Failed to get tree path.");
 
-        let mut f = File::create(&*path).unwrap();
-        let items = results.iter().filter_map(|x| {
-            if let Ok(ret) = x {
-                if ret.after == ret.before {
-                    return None;
-                }
-
-                Some(ret.name.clone())
-            } else {
-                None
-            }
-        });
-
-        let tree = get_tree(Path::new(".")).expect("Can not get tree path!");
-        let mut results = vec![];
-
-        for i in items {
-            results.push(find_path(&i, &tree));
-        }
-
-        f.write_all(results.join("\n").as_bytes()).unwrap();
-        info!("Wrote results to {}", path.display());
-    }
-
-    if let Some(json_file) = args.get_one::<String>("JSON") {
-        let path = Path::new(json_file);
-        let path = if path.is_absolute() {
-            Cow::Borrowed(path)
-        } else {
-            Cow::Owned(current_path.join(json_file))
-        };
-
-        let mut f = File::create(&*path).unwrap();
-        let tree = get_tree(Path::new(".")).expect("Can not get tree path!");
         let items = results
-            .iter()
+            .par_iter()
             .filter_map(|x| {
                 if let Ok(ret) = x {
                     if ret.after == ret.before {
@@ -386,8 +349,34 @@ fn main() {
             })
             .collect::<Vec<_>>();
 
-        serde_json::to_writer(&mut f, &items).expect("Failed to write JSON result");
-        info!("Wrote results to {}", path.display());
+        if let Some(log) = log {
+            let log = Path::new(log);
+            let log = if log.is_absolute() {
+                Cow::Borrowed(log)
+            } else {
+                Cow::Owned(current_path.join(log))
+            };
+
+            let mut f = File::create(&*log).unwrap();
+            for i in &items {
+                writeln!(f, "{}", find_path(&i.name, &tree)).unwrap();
+            }
+
+            info!("Wrote results to {}", log.display());
+        }
+
+        if let Some(json) = json {
+            let json = Path::new(json);
+            let json = if json.is_absolute() {
+                Cow::Borrowed(json)
+            } else {
+                Cow::Owned(current_path.join(json))
+            };
+
+            let mut f = File::create(&*json).unwrap();
+            serde_json::to_writer(&mut f, &items).unwrap();
+            info!("Wrote results to {}", json.display());
+        }
     }
 }
 
