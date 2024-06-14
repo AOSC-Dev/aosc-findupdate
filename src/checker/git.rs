@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::{extract_versions, version_compare, UpdateChecker};
 use crate::must_have;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use reqwest::blocking::Client;
 use reqwest::header::USER_AGENT;
 use winnow::{
@@ -31,9 +31,22 @@ fn single_line<'a>(input: &mut &'a [u8]) -> PResult<(&'a [u8], &'a [u8])> {
 fn parse_git_manifest<'a>(input: &mut &'a [u8]) -> PResult<Vec<(&'a [u8], &'a [u8])>> {
     repeat(1.., single_line).parse_next(input)
 }
-// end of parser-combinators
 
-fn collect_git_tags<'a>(input: &mut &'a [u8]) -> Result<Vec<&'a str>> {
+pub enum GitRefs<'a> {
+    Tag(&'a str),
+    Heads(&'a str, &'a str),
+}
+
+impl ToString for GitRefs<'_> {
+    fn to_string(&self) -> String {
+        match self {
+            GitRefs::Tag(name) => name.to_string(),
+            GitRefs::Heads(name, _) => name.to_string(),
+        }
+    }
+}
+// end of parser-combinators
+fn collect_git_refs<'a>(input: &mut &'a [u8]) -> Result<Vec<GitRefs<'a>>> {
     let tuples = parse_git_manifest(input).map_err(|e| anyhow!("Parser error: {:?}", e))?;
     let tags: Vec<_> = tuples
         .iter()
@@ -41,7 +54,19 @@ fn collect_git_tags<'a>(input: &mut &'a [u8]) -> Result<Vec<&'a str>> {
             if x.1.ends_with(&b"^{}"[..]) {
                 None
             } else if let Some(name) = x.1.strip_prefix(&b"refs/tags/"[..]) {
-                std::str::from_utf8(name).ok()
+                if let Ok(name) = std::str::from_utf8(name) {
+                    Some(GitRefs::Tag(name))
+                } else {
+                    None
+                }
+            } else if let Some(head_name) = x.1.strip_prefix(&b"refs/heads/"[..]) {
+                if let (Ok(head_name), Ok(rev)) =
+                    (std::str::from_utf8(head_name), std::str::from_utf8(x.0))
+                {
+                    Some(GitRefs::Heads(head_name, rev))
+                } else {
+                    None
+                }
             } else {
                 None
             }
@@ -53,6 +78,7 @@ fn collect_git_tags<'a>(input: &mut &'a [u8]) -> Result<Vec<&'a str>> {
 
 pub(crate) struct GitChecker {
     url: String,
+    branch: Option<String>,
     pattern: Option<String>,
 }
 
@@ -63,8 +89,13 @@ impl UpdateChecker for GitChecker {
     {
         let url = must_have!(config, "url", "Repository URL")?.to_string();
         let pattern = config.get("pattern").cloned();
+        let branch = config.get("branch").cloned();
 
-        Ok(GitChecker { url, pattern })
+        Ok(GitChecker {
+            url,
+            pattern,
+            branch,
+        })
     }
 
     fn check(&self, client: &Client) -> Result<String> {
@@ -76,19 +107,50 @@ impl UpdateChecker for GitChecker {
             .send()?;
         resp.error_for_status_ref()?;
         let body = resp.bytes()?;
-        let mut tags = collect_git_tags(&mut body.to_vec().as_ref())?
-            .into_iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>();
-        if let Some(pattern) = &self.pattern {
-            tags = extract_versions(pattern, &tags)?;
-        }
-        if tags.is_empty() {
-            return Err(anyhow!("Git ({}) didn't return any tags!", self.url));
-        }
-        tags.sort_unstable_by(|b, a| version_compare(a, b));
+        let body = body.to_vec();
+        let mut body = body.as_ref();
 
-        Ok(tags.first().unwrap().to_string())
+        let mut head: Box<dyn Iterator<Item = _>> =
+            Box::new(collect_git_refs(&mut body)?.into_iter());
+
+        if let Some(branch) = &self.branch {
+            head = Box::new(head.filter(move |x| match x {
+                GitRefs::Heads(head_name, _) => head_name == branch,
+                _ => false,
+            }));
+
+            let head = head.next().map(|x| {
+                if let GitRefs::Heads(_, rev) = x {
+                    rev
+                } else {
+                    unreachable!()
+                }
+            });
+
+            match head {
+                Some(head) => Ok(head.to_string()),
+                None => bail!("Git ({}) branch didn't return any rev!", self.url),
+            }
+        } else {
+            head = Box::new(head.filter(|x| match x {
+                GitRefs::Tag(_) => true,
+                _ => false,
+            }));
+
+            let mut head = head.map(|x| x.to_string()).collect::<Vec<_>>();
+
+            if let Some(pattern) = &self.pattern {
+                head = extract_versions(pattern, &head)?;
+            }
+
+            if head.is_empty() {
+                return Err(anyhow!("Git ({}) didn't return any tags!", self.url));
+            }
+
+            head.sort_unstable_by(|b, a| version_compare(a, b));
+
+            Ok(head.first().unwrap().to_string())
+        }
     }
 }
 
@@ -161,6 +223,19 @@ fn test_git_raw() {
         "url".to_string(),
         "https://git.tuxfamily.org/bluebird/cms.git".to_string(),
     );
+    let client = Client::new();
+    let checker = GitChecker::new(&options).unwrap();
+    dbg!(checker.check(&client).unwrap());
+}
+
+#[test]
+fn test_git_branch_raw() {
+    let mut options = HashMap::new();
+    options.insert(
+        "url".to_string(),
+        "https://git.tuxfamily.org/bluebird/cms.git".to_string(),
+    );
+    options.insert("branch".to_string(), "master".to_string());
     let client = Client::new();
     let checker = GitChecker::new(&options).unwrap();
     dbg!(checker.check(&client).unwrap());
