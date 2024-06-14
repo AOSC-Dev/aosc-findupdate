@@ -1,6 +1,7 @@
 use crate::filter::VersionStr;
 use aho_corasick::AhoCorasickBuilder;
 use anyhow::{anyhow, Result};
+use chrono::Local;
 use log::{info, warn};
 use owo_colors::colored::*;
 use rayon::prelude::*;
@@ -131,12 +132,28 @@ fn check_update_worker<P: AsRef<Path>>(
             spec.as_ref().display()
         )
     })?;
+
     let mut warnings = Vec::new();
     let config_line = config_line.to_owned() + ";"; // compensate for the parser quirk
     let config = parser::parse_check_update(&mut config_line.as_str())?;
+
+    let is_branch = config.get("branch").is_some();
+
     let new_version = checker::check_update(&config, client)?;
     let new_version = new_version.trim();
     let new_version = new_version.strip_prefix('v').unwrap_or(new_version);
+
+    if is_branch {
+        
+    }
+
+    // let new_version = if is_branch {
+    //     todo!()
+    //     // &Local::now().format("%Y%m%d").to_string()
+    // } else {
+    //     new_version
+    // };
+
     let new_version = if comply {
         let new_version_before_modification = new_version;
         let complied = new_version.compily_with_aosc();

@@ -76,6 +76,20 @@ pub(crate) fn parse_check_update(content: &mut &str) -> Result<Context> {
     Ok(context)
 }
 
+
+pub(crate) fn parse_srcs(content: &mut &str) -> Result<Context> {
+    let parsed = config_line(content).map_err(|err| anyhow!("Invalid config line: {}", err))?;
+    let mut context = HashMap::new();
+    let config = parsed.1;
+    context.insert("type".to_string(), parsed.0.to_string());
+
+    for (k, v) in config {
+        context.insert(k.to_string(), v.to_string());
+    }
+
+    Ok(context)
+}
+
 // copied from ciel
 
 fn read_package_list<P: AsRef<Path>>(filename: P, depth: usize) -> Result<Vec<String>> {
