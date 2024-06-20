@@ -181,7 +181,7 @@ fn check_update_worker<P: AsRef<Path>>(
         });
     }
     let snapshot_version = AhoCorasickBuilder::new().build(VCS_VERSION_NUMBERS);
-    if current_version.contains('+') && !comply {
+    if current_version.contains('+') && !comply && !is_upstream_ver {
         warnings.push(format!("Compound version number '{}'", current_version));
         if let Some(version) = snapshot_version?.find(current_version) {
             warnings.push(format!(
