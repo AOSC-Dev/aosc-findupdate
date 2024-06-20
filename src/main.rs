@@ -76,17 +76,28 @@ fn normalize_filename(path: &Path) -> Cow<str> {
     p.to_string_lossy()
 }
 
-fn update_version<P: AsRef<Path>>(new: &str, spec: P) -> Result<String> {
+fn update_version<P: AsRef<Path>>(
+    new: &str,
+    spec: P,
+    replace_upstream_ver: bool,
+) -> Result<String> {
     let mut f = OpenOptions::new()
         .read(true)
         .write(true)
         .open(spec.as_ref())?;
     let mut content = String::new();
     f.read_to_string(&mut content)?;
-    let replace = Regex::new("VER=.+").unwrap();
     let replace_rel = Regex::new("REL=.+\\s+").unwrap();
-    let replaced = replace.replace(&content, format!("VER={}", new));
+
+    let replaced = if replace_upstream_ver {
+        let replace = Regex::new("UPSTREAM_VER=.+").unwrap();
+        replace.replace(&content, format!("UPSTREAM_VER={}", new))
+    } else {
+        let replace = Regex::new("VER=.+").unwrap();
+        replace.replace(&content, format!("VER={}", new))
+    };
     let replaced = replace_rel.replace(&replaced, "");
+
     f.seek(SeekFrom::Start(0))?;
     let bytes = replaced.as_bytes();
     f.write_all(bytes)?;
@@ -118,12 +129,23 @@ fn check_update_worker<P: AsRef<Path>>(
     client: &Client,
     spec: P,
     dry_run: bool,
-    comply: bool,
+    mut comply: bool,
 ) -> Result<CheckerResult> {
     let s = parser::parse_spec(spec.as_ref())?;
-    let current_version = s
-        .get("VER")
-        .ok_or_else(|| anyhow!("{}: 'VER' field is missing!", spec.as_ref().display()))?;
+    let mut is_upstream_ver = false;
+    let current_version = if let Some(v) = s.get("UPSTREAM_VER") {
+        comply = false;
+        is_upstream_ver = true;
+        v
+    } else {
+        s.get("VER").ok_or_else(|| {
+            anyhow!(
+                "{}: 'UPSTREAM_VER' and 'VER' field is missing!",
+                spec.as_ref().display()
+            )
+        })?
+    };
+
     let current_version = current_version.trim();
     let config_line = s.get("CHKUPDATE").ok_or_else(|| {
         anyhow!(
@@ -159,7 +181,7 @@ fn check_update_worker<P: AsRef<Path>>(
         });
     }
     let snapshot_version = AhoCorasickBuilder::new().build(VCS_VERSION_NUMBERS);
-    if current_version.contains('+') && !comply {
+    if current_version.contains('+') && !comply && !is_upstream_ver {
         warnings.push(format!("Compound version number '{}'", current_version));
         if let Some(version) = snapshot_version?.find(current_version) {
             warnings.push(format!(
@@ -183,7 +205,7 @@ fn check_update_worker<P: AsRef<Path>>(
     }
 
     if !dry_run {
-        let modified = update_version(new_version, spec.as_ref())?;
+        let modified = update_version(new_version, spec.as_ref(), is_upstream_ver)?;
         let mut new_ctx = HashMap::new();
         match abbs_meta_apml::parse(&modified, &mut new_ctx) {
             Ok(_) => {

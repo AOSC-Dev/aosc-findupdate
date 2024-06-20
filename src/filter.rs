@@ -168,6 +168,7 @@ fn test_comply_with_aosc() {
     let version_str_with_alpha = &"3.0-alpha5";
     let version_str_with_shortned_alpha = &"2.4a1";
     let version_str_with_shortned_beta = &"2.3b3";
+
     assert_eq!(
         normal_version_str.compily_with_aosc(),
         String::from(normal_version_str.to_owned())
