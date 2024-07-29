@@ -162,10 +162,12 @@ fn check_update_worker<P: AsRef<Path>>(
     let new_version = if comply {
         let new_version_before_modification = new_version;
         let complied = new_version.compily_with_aosc();
-        warnings.push(format!(
-            "Compliance mode enabled, was '{}'",
-            new_version_before_modification
-        ));
+        if new_version_before_modification != complied {
+            warnings.push(format!(
+                "Compliance mode enabled, was '{}'",
+                new_version_before_modification
+            ));
+        }
         complied
     } else {
         new_version.to_string()
